@@ -35,8 +35,8 @@ library(ggstats)
 
 # Parameters
 term_name <- "Spring-2025"
-sftp_folder <- paste0("~/Library/CloudStorage/RemoteDrive-rpgroupccc/CCSS/Statewide Data Files/")
-employee_survey_file <- paste0(sftp_folder, "/employee-climate-survey-", term_name, ".sav")
+sftp_folder <- paste0("fake data/")
+employee_survey_file <- paste0(sftp_folder, "/employee_survey_fake.sav")
 
 scale_colors <- c("#035157", "#179CA6", "#D97D0D", "#BF563D")
 scale_colors_rev <- c("#BF563D","#D97D0D", "#179CA6","#035157")
@@ -56,8 +56,8 @@ employee_survey <- haven::read_spss(employee_survey_file) %>%
                                 provided_race > 0 & race_07 == 0 ~ "BIPOC", 
                                 TRUE ~ "Not BIPOC")) %>%
   filter(consent == 10001) %>%
-  mutate(responseid = paste0(urlvar_college, responseid)) %>%
-  slice_sample(n=100)
+  mutate(responseid = paste0(urlvar_college, responseid)) #%>%
+  #slice_sample(n=100)
   
   
 
