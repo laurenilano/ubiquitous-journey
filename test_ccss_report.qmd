@@ -1,0 +1,2197 @@
+---
+title: CCSS Statewide Employee Survey Results
+subtitle: Spring 2025
+format:
+  html:
+    toc: true
+    toc-location: left
+    embed-resources: true
+    title-block: true
+    title-block-style: manuscript
+    css: styles.css
+---
+
+
+
+```{r}
+#| message: false
+#| warning: false
+#| include: false
+
+# 9-18-2025: Added dynamic row grouping for demographics (variable grouping based on number of gender/race categories used)
+# 9-18-2025: Added "Did not receive question" factor for items excluded from survey in 99_create_combined_statewide
+# 9-23-2025: Added racial tension graph
+# Note: for gglikert only excludes NA from the denominator, so need to convert 'did not receive question' to NA *before* running gglikert 
+
+library(tidyverse)
+library(fst)
+library(knitr)
+library(kableExtra)
+library(rmarkdown)
+library(labelled)
+library(readxl)
+library(arrow)
+library(glue)
+library(ggstats)
+
+# Parameters
+term_name <- "Spring-2025"
+sftp_folder <- paste0("~/Library/CloudStorage/RemoteDrive-rpgroupccc/CCSS/Statewide Data Files/")
+employee_survey_file <- paste0(sftp_folder, "/employee-climate-survey-", term_name, ".sav")
+
+scale_colors <- c("#035157", "#179CA6", "#D97D0D", "#BF563D")
+scale_colors_rev <- c("#BF563D","#D97D0D", "#179CA6","#035157")
+scale_colors_rev3 <- c("#BF563D", "#D97D0D","#035157")
+scale_colors_binary <- c("#035157", "#BF563D")
+
+
+
+# ==============================================================================
+# Ingest Data 
+# ==============================================================================
+set.seed(1989)
+
+employee_survey <- haven::read_spss(employee_survey_file) %>% 
+  mutate(provided_race = race_01 + race_02 + race_03 + race_04 + race_05 + race_06 + race_07 + race_08) %>%
+  mutate(BIPOC_Flag = case_when(is.na(provided_race) ~ "Did not provide Race/Ethnicity",
+                                provided_race > 0 & race_07 == 0 ~ "BIPOC", 
+                                TRUE ~ "Not BIPOC")) %>%
+  filter(consent == 10001) %>%
+  mutate(responseid = paste0(urlvar_college, responseid)) %>%
+  slice_sample(n=100)
+  
+  
+
+respondents <- employee_survey %>% distinct(responseid) %>% nrow()
+
+
+# DEMOGRAPHICS
+get_race_ethnicity_disagg <- function(df, var){
+  
+  race_01 <- df %>%
+    filter(race_01 == 1) %>%
+    mutate(group = "African American/Black") %>%
+    count(group, {{var}})
+  
+  race_02 <- df %>% 
+    filter(race_02 == 1) %>%
+    mutate(group = "American Indian/Alaska Native") %>%
+    count(group, {{var}})
+  
+  race_03 <- df %>% 
+    filter(race_03 == 1) %>%
+    mutate(group = "Asian") %>%
+    count(group, {{var}})
+  
+  race_04 <- df %>% 
+    filter(race_04 == 1) %>%
+    mutate(group = "Latine/Hispanic") %>%
+    count(group, {{var}})
+  
+  race_05 <- df %>%
+    filter(race_05 == 1) %>%
+    mutate(group = "Middle Eastern, Arab, or Arab American") %>%
+    count(group, {{var}})
+  
+  race_06 <- df %>%
+    filter(race_06 == 1) %>%
+    mutate(group = "Native Hawaiian or Pacific Islander") %>%
+    count(group, {{var}})
+  
+  race_07 <- df %>%
+    filter(race_07 == 1) %>%
+    mutate(group = "White") %>%
+    count(group, {{var}})
+  
+  race_08 <- df %>%
+    filter(race_08 == 1) %>%
+    mutate(group = "Not listed") %>%
+    count(group, {{var}})
+  
+  race_refuse <- df %>%
+    filter(race_refuse == 1) %>%
+    mutate(group = "Prefer not to disclose") %>%
+    count(group, {{var}})
+  
+  race_no_response <- df %>%
+    mutate(race_sum = race_01 + race_02 + race_03 + race_04 + race_05 +
+             race_06 + race_07 + race_08 + race_refuse) %>%
+    filter(race_sum == 0) %>%
+    mutate(group = "Saw Race/Ethnicity Item but did not respond") %>%
+    count(group, {{var}})
+  
+  race_missing <- df %>%
+    filter(is.na(race_01) & is.na(race_02) & is.na(race_03) & is.na(race_04) &
+             is.na(race_05) & is.na(race_06) & is.na(race_07) & is.na(race_08)) %>%
+    mutate(group = "Did not see Race/Ethnicity Item") %>%
+    count(group, {{var}})
+  
+  rbind(race_01, race_02, race_03, race_04, race_05, race_06, race_07, race_08,
+        race_refuse, race_no_response, race_missing)
+}
+
+get_gender_disagg <- function(df, var){
+  
+  gender_01 <- df %>%
+    filter(gender_01 == 1) %>%
+    mutate(group = "Agender") %>%
+    count(group, {{var}})
+  
+  gender_02 <- df %>%
+    filter(gender_02 == 1) %>%
+    mutate(group = "Androgyne") %>%
+    count(group, {{var}})
+  
+  gender_03 <- df %>%
+    filter(gender_03 == 1) %>%
+    mutate(group = "Demigender") %>%
+    count(group, {{var}})
+  
+  gender_04 <- df %>%
+    filter(gender_04 == 1) %>%
+    mutate(group = "Endosex") %>%
+    count(group, {{var}})
+  
+  gender_05 <- df %>%
+    filter(gender_05 == 1) %>%
+    mutate(group = "Genderfluid") %>%
+    count(group, {{var}})
+  
+  gender_06 <- df %>%
+    filter(gender_06 == 1) %>%
+    mutate(group = "Genderqueer") %>%
+    count(group, {{var}})
+  
+  gender_07 <- df %>%
+    filter(gender_07 == 1) %>%
+    mutate(group = "Intersex") %>%
+    count(group, {{var}})
+  
+  gender_08 <- df %>%
+    filter(gender_08 == 1) %>%
+    mutate(group = "Man") %>%
+    count(group, {{var}})
+  
+  gender_09 <- df %>%
+    filter(gender_09 == 1) %>%
+    mutate(group = "Non-binary") %>%
+    count(group, {{var}})
+  
+  gender_10 <- df %>%
+    filter(gender_10 == 1) %>%
+    mutate(group = "Two-Spirit") %>%
+    count(group, {{var}})
+  
+  gender_11 <- df %>%
+    filter(gender_11 == 1) %>%
+    mutate(group = "Woman") %>%
+    count(group, {{var}})
+  
+  gender_12 <- df %>%
+    filter(gender_12 == 1) %>%
+    mutate(group = "I use a different term") %>%
+    count(group, {{var}})
+  
+  gender_refuse <- df %>%
+    filter(gender_refuse == 1) %>%
+    mutate(group = "Prefer not to share") %>%
+    count(group, {{var}})
+  
+  gender_no_response <- df %>% 
+    mutate(gender_sum = gender_01 + gender_02 + gender_03 + gender_04 + gender_05 +
+             gender_06 + gender_07 + gender_08 + gender_09 + gender_10 + gender_11 + gender_12 +
+             gender_refuse) %>%
+    filter(gender_sum == 0) %>%
+    mutate(group = "Saw Gender Item but did not respond") %>%
+    count(group, {{var}})
+  
+  gender_missing <- df %>%
+    filter(is.na(gender_01) & is.na(gender_02) & is.na(gender_03) & is.na(gender_04) &
+             is.na(gender_05) & is.na(gender_06) & is.na(gender_07) & is.na(gender_08) &
+             is.na(gender_09) & is.na(gender_10) & is.na(gender_11) & is.na(gender_12)) %>%
+    mutate(group = "Did Not See Gender Item") %>%
+    count(group, {{var}})
+  
+rbind(gender_01, gender_02, gender_03, gender_04, gender_05,
+      gender_06, gender_07, gender_08, gender_09, gender_10, 
+      gender_11, gender_12, gender_refuse, gender_no_response, 
+      gender_missing)
+
+}
+
+```
+
+# Introduction
+
+This report summarizes the key statewide findings from the Spring 2025 Campus Climate Survey, administered by The Research and Planning Group for California Community Colleges ([The RP Group](https://rpgroup.org/)). The survey garnered `r scales::comma(respondents)` respondents, providing a cross-section of employee sentiment regarding the campus climate. The results reveal both strengths to build upon and areas requiring intervention to ensure an inclusive, supportive workplace for all employees. The statewide results presented below represent aggregated responses across all participating institutions. However, for some items, results from select colleges are excluded due to institutional customizations in which certain survey questions were not administered locally.
+
+
+## Demographics
+The demographic characteristics of all survey respondents across participating institutions are summarized below. Each institution received its own local data, enabling further disaggregation of categories such as "Other – Write-In" as appropriate for local analyses. The statewide overview presented here provides a comparative reference point for campuses to contextualize their own respondent demographics. Because the gender and race/ethnicity questions appeared at the conclusion of the survey, some participants did not encounter these items. In the table below, we analytically differentiate between respondents who reached the end of the survey but did not answer these non-required questions and those who exited the survey prior to completion.
+
+:::{.callout-caution icon=false collapse="true"}
+## Expand to learn more about the survey respondents
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+get_employee_demographics <- function(var){
+  employee_survey %>%
+  mutate(var_name = as_factor({{var}}, levels = "labels")) %>%
+  count(var_name) %>%
+  filter(!is.na(var_name)) %>%
+  mutate(pct = paste0(round(n/sum(n) * 100, 0), "%")) %>%
+  rename(group = var_name) %>%
+    select(group, n, pct)
+}
+
+employment_class <- get_employee_demographics(employment_class)
+employment_length <- get_employee_demographics(employment_length)
+employment_area <- get_employee_demographics(employment_area)
+employment_status <- get_employee_demographics(employment_status)
+
+gender <- get_gender_disagg(employee_survey, consent) %>%
+  select(group, n) %>% 
+  mutate(pct = paste0(round(n/sum(n) * 100, 0), "%"))
+#nrow(gender)
+end_gender <- 18+nrow(gender)-1
+
+raceeth <- get_race_ethnicity_disagg(employee_survey, consent) %>%
+  select(group, n) %>%
+  mutate(pct = paste0(round(n/sum(n) * 100, 0), "%")) 
+
+start_raceeth <- 18+nrow(gender)
+end_raceeth <- start_raceeth + nrow(raceeth)-1
+
+rbind(employment_area, employment_class, employment_length, employment_status, gender, raceeth) %>%
+  kable(col.names = c("", "n", "%")) %>%
+  pack_rows("Employment Area", 1, 4) %>%
+  pack_rows("Employee Classification", 5, 9) %>%
+  pack_rows("Employment Length", 10, 14) %>%
+  pack_rows("Employment Status", 15, 17) %>%
+  pack_rows("Gender*", 18, end_gender) %>%
+  pack_rows("Race/Ethnicity*", start_raceeth, end_raceeth) %>%
+  kable_styling(bootstrap_options = c("striped", "hover")) %>%
+  footnote(general = "*Percentages may not add up to 100% for Race/Ethnicity and Gender items since respondents could select more than one option")
+  
+
+```
+:::
+
+{{< pagebreak >}}
+# Topline Survey Results 
+
+The results presented in this section reflect averaged agreement scores across multiple content areas related to campus climate. The percentages reflect the proportion of respondents who responded positively (i.e., "Strongly Agree" or "Agree") across all of the survey items that comprise each construct. These aggregated indicators are designed to provide a high-level view of the overall climate experience, capturing perceptions across all employee respondents. These metrics are intended to serve as entry points for identifying factors that positively or negatively influence the campus environment. Additionally, colleges are encouraged to further disaggregate this data by specific survey items or demographic groups to yield deeper insights into the unique experiences of employee groups.
+
+[Explain rating scale]
+
+The topline survey results are intended to provide a general snapshot of the four main sections included in this report: 
+
+**Empowerment and Agency**
+
+  + Employee Belonging at the College
+  + Employee Belonging in the Department
+  + Fair and Equal Treatment
+
+**Diversity, Equity, Inclusion and Accessibility**
+
+  + NEED TO ADD
+
+**Safety and Security**
+
+  + Physical Safety
+
+**Trust and Confidence**
+
+  + Leadership Effectiveness of the respondents' Constituency Group
+  + Leadership Effectiveness of the respondents' Department/Area
+  + Leadership Effectiveness of the Executive Leadership Team
+  + Leadership Effectiveness of the Board of Trustees
+     
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+# Physical Safety
+df_agg_phys_safety <- employee_survey %>%
+  select(responseid, starts_with("safety_")) %>%
+  pivot_longer(cols = safety_01:safety_05,
+               names_to = "var",
+               values_to = "response") %>%
+  mutate(var = "employee physical safety") %>%
+  filter(!is.na(response) & response != 10208) %>%
+  mutate(response = as_factor(response, levels = "labels")) %>%
+  mutate(positive = ifelse(response %in% c("Very safe", "Somewhat safe"), 1, 0))
+
+physical_safety_positive <- df_agg_phys_safety %>%
+  count(positive) %>%
+  mutate(total = sum(n),
+         pct = n/sum(n)) %>%
+  filter(positive == 1) %>%
+  mutate(construct = "Physical Safety") %>%
+  select(construct, n, total, pct)
+
+# Employee Belonging - College
+df_agg_belong_coll <- employee_survey %>%
+  select(responseid, contains("belong_coll")) %>%
+  pivot_longer(cols = belong_coll_01:belong_coll_08,
+               names_to = "var",
+               values_to = "response"
+               ) %>%
+  filter(!is.na(response) & response != 10046) %>%
+  mutate(response = as_factor(response, level = "labels")) %>%
+  mutate(positive = ifelse(response %in% c("Strongly Agree", "Agree"), 1, 0))
+
+
+emp_belong_coll_positive <- df_agg_belong_coll %>%
+  count(positive) %>%
+  mutate(total = sum(n),
+         pct = n/sum(n)) %>%
+  filter(positive == 1) %>%
+  mutate(construct = "Employee Belonging - College") %>%
+  select(construct, n, total, pct)
+
+# Employee Belonging - Department
+df_agg_emp_belong_dept <- employee_survey %>%
+  select(responseid, contains("belong_dept")) %>%
+  pivot_longer(cols = belong_dept_01:belong_dept_07,
+               names_to = "var",
+               values_to = "response") %>%
+  filter(!is.na(response) & response != 10064 & response != 10055) %>%
+  mutate(response = as_factor(response, levels = "labels")) %>%
+  mutate(positive = ifelse(response %in% c("Strongly Agree", "Agree"), 1, 0))
+
+
+emp_belong_dept_positive <- df_agg_emp_belong_dept %>%
+  count(positive) %>%
+  mutate(total = sum(n),
+         pct = n/sum(n)) %>%
+  filter(positive == 1) %>%
+  mutate(construct = "Employee Belonging - Department") %>%
+  select(construct, n, total, pct)
+
+# Fair and Equal Treatment (Employee Opportunity)
+
+df_agg_emp_opp <- employee_survey %>%
+  select(responseid, contains("opportunity_")) %>%
+  pivot_longer(cols = opportunity_01:opportunity_08,
+               names_to = "var",
+               values_to = "response") %>%
+  mutate(var = "employee opportunity aggregate") %>%
+  filter(!is.na(response) & response != 10064) %>%
+  mutate(response = as_factor(response, level = "labels")) %>%
+  mutate(positive = ifelse(response %in% c("Strongly Agree", "Agree"), 1, 0))
+
+emp_opp_positive <- df_agg_emp_opp %>%
+  count(positive) %>%
+  mutate(total = sum(n),
+         pct = n/sum(n)) %>%
+  filter(positive == 1) %>%
+  mutate(construct = "Fair and Equal Treatment") %>%
+  select(construct, n, total, pct)
+
+# Leadership
+df_leadership <- employee_survey %>%
+  select(responseid, starts_with("leader_")) %>%
+  pivot_longer(cols = leader_const_01:leader_bot_12,
+               names_to = "var",
+               values_to = "response") %>%
+  filter(response != 99999) %>%
+  mutate(leadership = case_when(grepl("_const_", var) ~ "Constituency Group",
+                           grepl("_dept_", var) ~ "Department/Area",
+                           grepl("_exec_", var) ~ "Executive Leadership Team",
+                           grepl("_bot_", var) ~ "Board of Trustees",
+                           TRUE ~ NA)) %>%
+  mutate(response = as_factor(response, levels = "labels")) %>%
+  filter(!is.na(response) & response != "Not Applicable") %>%
+  mutate(positive = ifelse(response %in% c("Strongly Agree", "Agree"), 1, 0))
+
+
+leadership_positive <- df_leadership %>%
+  count(leadership, positive) %>%
+  group_by(leadership) %>%
+  mutate(total = sum(n),
+         pct = n/sum(n)) %>%
+  filter(positive == 1) %>%
+  ungroup() %>%
+  mutate(construct = paste0("Leadership Effectiveness - ", leadership)) %>%
+  select(construct, n, total, pct)
+  
+
+constructs <- rbind(emp_belong_coll_positive, emp_belong_dept_positive, physical_safety_positive, emp_opp_positive, leadership_positive) %>% 
+  mutate(order = case_when(construct == "Employee Belonging - College" ~ 1, 
+                           construct == "Employee Belonging - Department" ~ 2,
+                           construct == "Fair and Equal Treatment" ~ 3,
+                           construct == "Physical Safety" ~ 4,
+                           construct == "Leadership Effectiveness - Constituency Group" ~ 5,
+                           construct == "Leadership Effectiveness - Department/Area" ~ 6,
+                           construct == "Leadership Effectiveness - Executive Leadership Team" ~ 7,
+                           construct == "Leadership Effectiveness - Board of Trustees" ~ 8)) %>%
+  arrange(desc(order)) %>%
+  mutate(construct = factor(construct, levels = c("Employee Belonging - College",
+                                                  "Employee Belonging - Department",
+                                                  "Fair and Equal Treatment",
+                                                  "Physical Safety",
+                                                  "Leadership Effectiveness - Constituency Group",
+                                                  "Leadership Effectiveness - Department/Area",
+                                                  "Leadership Effectiveness - Executive Leadership Team",
+                                                  "Leadership Effectiveness - Board of Trustees"))) %>%
+  mutate(pct_neat = paste0(round(pct * 100, 0), "%")) %>%
+  # mutate(college = params$collegename) %>%
+  mutate(scale_bins = case_when(pct >= .76 ~ "Area of Strength\n(76-100%)",
+                                pct >= .51 ~ "Area of Opportunity\n(51-75%)",
+                                TRUE ~ "Warrants Attention\n(0-50%)")) %>%
+  mutate(scale_bins = factor(scale_bins, levels = c("Warrants Attention\n(0-50%)",
+                                                    "Area of Opportunity\n(51-75%)",
+                                                    "Area of Strength\n(76-100%)"))) %>%
+  mutate(text_color = ifelse(scale_bins %in% c("Area of Strength\n(76-100%)","Warrants Attention\n(0-50%)") , "group1", "group2")) %>%
+  mutate(text_color = factor(text_color))
+  
+
+constructs %>%
+  ggplot(aes(x = 1, y = fct_rev(construct), fill = scale_bins)) +
+  geom_tile(color = "white",
+            lwd = 1.5,
+            linetype = 1) +
+  geom_text(aes(label = paste0(round(pct * 100, 0), "%"), colour = text_color)) +
+  scale_colour_manual(values = c("white", "black")) +
+  guides(colour = "none") +
+  scale_fill_manual(values = scale_colors_rev3) + 
+  # scale_fill_manual(values = c("#a0c15a", "#add633", "#ffd934", "#ffb234", "#ff8c5a")) +
+  #scale_fill_distiller(palette = "RdYlGn", direction = 1) +
+  #scale_fill_gradientn(colours = wesanderson::wes_palette("Zissou1", 100, type = "continuous")) +
+  # guides(fill = "none") + 
+  # scale_y_discrete(labels = function(x) str_wrap(x, width = 25)) +
+  xlab("") +
+  ylab("") +
+  theme_minimal() +
+  theme(axis.text.y = element_text(colour = "black"),
+        axis.text.x = element_blank(),
+        panel.grid.major = element_blank(),
+        legend.position = "top",
+        legend.margin = margin(l = -.35, unit = "npc"),
+        legend.title = element_blank())
+
+
+```
+
+{{< pagebreak >}}
+# Campus Climate Experiences
+
+The following sections show more detailed findings across the four dimensions: (1) Empowerment and Agency; (2) Diversity, Equity, Inclusion, and Accessibility; (3) Safety and Security; (4) Trust and Confidence. 
+
+For agreement survey items, agree and disagree responses are aggregated and all respondents who selected another response (e.g., "Not Sure", "Neither Agree nor Disagree", or "Not Applicable") are aggregated and shown in grey. We exclude all respondents who skipped each survey item, so grey bars connote active responses that do not align with either agreement or disagreement. The full frequency tables for each survey item are provided to the college in an excel file for further analysis. 
+
+## Campus Climate Rating Overall
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 2.5
+#| fig-width: 8
+
+climate_rating_n <- employee_survey %>%
+  count(climate_rating) %>%
+  filter(!is.na(climate_rating))
+
+climate_rating_n <- sum(climate_rating_n$n)
+
+employee_survey %>%
+  count(climate_rating) %>%
+  ungroup() %>%
+  mutate(response = as_factor(climate_rating, levels = "labels")) %>%
+  filter(!is.na(response)) %>%
+  mutate(response = factor(response, levels = c("Very positive", "Somewhat positive",
+                                                "Neither positive or negative", 
+                                                "Somewhat negative", "Very negative"))) %>%
+  mutate(pct = n/sum(n),
+         pct_neat = paste0(round(pct * 100, 0), "%")) %>%
+  
+  ggplot(aes(x = 1, y = pct, fill = response)) +
+  geom_col() +
+  coord_flip() +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  scale_fill_manual(values = c("#035157", "#179CA6", "lightgrey", "#D97D0D", "#BF563D")) +
+  
+  geom_text(aes(label = pct_neat, color = response), position = position_stack(vjust = 0.5)) +
+  scale_color_manual(values = c("white", "black", "black", "black", "white")) +
+  guides(color = "none") +
+  
+  labs(x = "", y = "") +
+  ggtitle("All in all, how would you rate the campus climate for employees?", subtitle = paste0("n=", scales::comma(climate_rating_n))) +
+  theme_bw() + 
+  theme(plot.title = element_text(size=12, face="bold"),
+        legend.position = "top",
+        legend.title = element_blank(),
+        legend.key.size = unit(0.3, "cm"),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank()) 
+
+
+# gglikert(employee_survey, 
+#          include = climate_rating,
+#          exclude_fill_values = c("Neither positive or negative"),
+#          reverse_likert = TRUE,
+#          add_totals = FALSE,
+#          labels_hide_below = .01) + 
+#   scale_fill_manual(values = scale_colors) +
+#   ggtitle(paste0("All in all, how would you rate the campus climate for employees at ", params$collegename, "?")) +
+#   guides(fill=guide_legend(reverse=TRUE)) +
+#   geom_vline(xintercept=0) +
+#   labs(caption = "Graph excludes 'Neither positive or negative' responses") + 
+#   scale_x_continuous(labels = function(x) paste0(abs(x)*100, "%"), limits = c(-1, 1)) +
+#   theme(
+#         legend.position = "top",
+#         axis.text.y = element_blank(), 
+#         panel.grid.major = element_blank(),
+#         panel.grid.minor = element_blank(),
+#         panel.border = element_blank(),
+#         panel.background = element_blank()) 
+```
+
+
+{{< pagebreak >}}
+## Empowerment and Agency
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 6
+#| fig-width: 8
+
+n_empowerment_agency <- employee_survey %>%
+  select(responseid, engage_01:engage_07) %>%
+  pivot_longer(cols = engage_01:engage_07,
+               names_to = "var",
+               values_to = "response") %>%
+  filter(!is.na(response)) %>%
+  distinct(responseid) %>%
+  nrow()
+
+gglikert(employee_survey, 
+         include = engage_01:engage_07, 
+         # exclude_fill_values = c("Somewhat true"),
+         variable_labels = c(
+            engage_01 = "I have professional goals and know how to achieve them",
+            engage_02 = "I am focused on trying to achieve my professional goals",
+            engage_03 = "I feel somebody at work wants and helps me to succeed in my professional goals",
+            engage_04 = "I am actively engaged at work",
+            engage_05 = "I feel connected and part of the community",
+            engage_06 = "I feel valued and appreciated at work",
+            engage_07 = "I feel safe being my authentic self at work"),
+         y_label_wrap = 30,
+         # reverse_likert = TRUE,
+         add_labels = TRUE,
+         add_totals = FALSE,
+         labels_hide_below = .01,
+         width = 0.6) + 
+   scale_fill_manual(values = c("#D97D0D", "#179CA6", "#035157")) +
+  ggtitle("When thinking specifically about your experience in the \nlast year, how true are the following about your experiences?", subtitle= paste0("n=", scales::comma(n_empowerment_agency))) +
+
+  scale_x_continuous(labels = function(x) paste0(abs(x)*100, "%"), limits = c(-1, 1)) +
+  theme(axis.text.y = element_text(size=12, colour = "black"),
+        plot.title = element_text(size = 11, face="bold"),
+        legend.position = "top",
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank()) 
+
+```
+
+
+
+{{< pagebreak >}}
+### Overall Sense of Belonging
+
+```{r}
+#| echo: false
+#| message: true
+#| warning: false
+#| fig-height: 8
+#| fig-width: 8
+
+library(patchwork)
+# show the layout
+# figure1
+
+n_belong_coll <- employee_survey %>%
+  select(responseid, belong_coll_01:belong_coll_08) %>%
+  pivot_longer(cols = belong_coll_01:belong_coll_08,
+               names_to = "var",
+               values_to = "response") %>%
+  filter(!is.na(response)) %>%
+  distinct(responseid) %>%
+  nrow()
+
+not_sure_etc <- employee_survey %>%
+    select(responseid, starts_with("belong_coll_")) %>%
+    pivot_longer(cols = belong_coll_01:belong_coll_08,
+               names_to = "var",
+               values_to = "response") %>%
+  
+  mutate(response = as_factor(response, levels = "labels")) %>%
+  filter(!is.na(response)) %>%
+  mutate(not_sure = ifelse(response %in% c("Neither agree nor disagree", "Not Sure", "Neither Agree nor Disagree"),1,0)) %>%
+  count(var, not_sure) %>%
+  group_by(var) %>%
+  mutate(pct_not_sure = n/sum(n)) %>%
+  filter(not_sure == 1) %>%
+  mutate(pct_neat = paste0(round(pct_not_sure *100, 0), "%")) %>%
+  mutate(not_sure_string = "Another response")
+
+
+  
+
+likert_belong <- gglikert(employee_survey, 
+         include = belong_coll_01:belong_coll_08, 
+         exclude_fill_values = c("Neither agree nor disagree", "Not Applicable", "Not Sure", "Neither Agree nor Disagree"),
+         variable_labels = c(
+            belong_coll_01 = "I feel a sense of belonging",
+            belong_coll_02 = "I feel seen and heard",
+            belong_coll_03 = "I feel respected by other employees outside of my department",
+            belong_coll_04 = "There are opportunities for me to contribute to decisions made that affect the entire college/district",
+            belong_coll_05 = "I feel that complaints and concerns are addressed promptly",
+            belong_coll_06 = "I feel I can provide critical feedback without fear of retaliation",
+            belong_coll_07 = "I feel safe to express my opinions",
+            belong_coll_08 = "I feel respected"),
+         y_label_wrap = 40,
+         reverse_likert = TRUE,
+         add_totals = TRUE,
+         add_labels = FALSE,
+         labels_hide_below = .01,
+         width = 0.7) + 
+  scale_fill_manual(values = scale_colors) +
+  ggtitle("Please mark your agreement level with the following statements:", subtitle = paste0("n=", scales::comma(n_belong_coll))) +
+  geom_vline(xintercept=0) +
+  guides(fill = guide_legend(reverse = TRUE)) +
+    scale_x_continuous(labels = function(x) paste0(abs(x)*100, "%"), limits = c(-1, 1)) +
+  theme(axis.text.y = element_text(size=12, colour = "black"),
+        plot.title = element_text(size=11, face = "bold"),
+        legend.position = "top",
+        legend.key.size = unit(0.3, "cm"),
+        axis.ticks = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank()) 
+
+not_sure_bars <- not_sure_etc %>% 
+  ggplot(aes(x = fct_rev(var), y = pct_not_sure)) + # need to reverse the factor because coord_flip reverses the order
+  geom_col(aes(fill=not_sure_string), width = 0.7) +
+  geom_text(aes(label = pct_neat), hjust = -0.05, size = 3.5, fontface = "bold") +
+  coord_flip() +
+  scale_fill_manual(values = "lightgrey") +
+  ggtitle("") +
+  # labs(caption = "Another response includes 'Not Sure,' and 'Neither Agree nor Disagree'") +
+  xlab("") +
+  ylab("") +
+  ylim(0, .5) + 
+  theme_bw() +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  theme(legend.position = "top",
+        legend.title = element_blank(),
+        legend.key.size = unit(0.3, "cm"),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank())
+
+
+likert_belong + not_sure_bars + plot_layout(widths = c(4, 1))
+
+# Write out graph
+likert_belong + not_sure_bars + plot_layout(widths = c(4, 1)) -> x
+
+#ggsave(paste0("../Out/PPT Plots/emp_belonging_wide_", params$collegename, ".png"), plot = x, width = 10, height = 6, dpi = 300)
+
+
+```
+
+
+
+{{< pagebreak >}}
+### Sense of Belonging within Department/Area
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 8
+#| fig-width: 8
+
+
+n_belong_dept <- employee_survey %>%
+  select(responseid, belong_dept_01:belong_dept_07) %>%
+  pivot_longer(cols = belong_dept_01:belong_dept_07,
+               names_to = "var",
+               values_to = "response") %>%
+  filter(!is.na(response)) %>%
+  distinct(responseid) %>%
+  nrow()
+
+# get dataframe with not sure responses 
+not_sure_etc <- employee_survey %>%
+    select(responseid, starts_with("belong_dept_")) %>%
+    pivot_longer(cols = belong_dept_01:belong_dept_07,
+               names_to = "var",
+               values_to = "response") %>%
+  mutate(response = as_factor(response, levels = "labels")) %>%
+  filter(!is.na(response)) %>%
+  mutate(not_sure = ifelse(response %in% c("Neither agree nor disagree", "Not Sure", "Neither Agree nor Disagree"),1,0)) %>%
+  count(var, not_sure) %>%
+  group_by(var) %>%
+  mutate(pct_not_sure = n/sum(n)) %>%
+  filter(not_sure == 1) %>%
+  mutate(pct_neat = paste0(round(pct_not_sure *100, 0), "%")) %>%
+  mutate(not_sure_string = "Another response")
+
+# Get likert graph for dept belonging items
+likert_belong_dept <- gglikert(employee_survey, 
+         include = belong_dept_01:belong_dept_07, 
+         exclude_fill_values = c("Neither agree nor disagree", "Not Applicable", "Not Sure", "Neither Agree nor Disagree"),
+         variable_labels = c(
+            belong_dept_01 = "I feel a sense of belonging",
+            belong_dept_02 = "I feel seen and heard",
+            belong_dept_03 = "I feel respected by employees in my area/department",
+            belong_dept_04 = "There are opportunities for me to contribute to decisions made that affect my area/department",
+            belong_dept_05 = "I feel that complaints and concerns are addressed promptly",
+            belong_dept_06 = "I feel I can provide critical feedback without fear of retaliation",
+            belong_dept_07 = "I feel safe to express my opinions"),
+         reverse_likert = TRUE,
+         add_totals = TRUE,
+         add_labels = FALSE,
+         labels_hide_below = .01,
+         y_label_wrap = 40,
+         width = 0.7) + 
+  scale_fill_manual(values = scale_colors) +
+  ggtitle("Reflecting on your experiences your department/area, please mark \nyour level of agreement:", subtitle = paste0("n=", scales::comma(n_belong_dept))) +
+   geom_vline(xintercept=0) +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  scale_x_continuous(labels = function(x) paste0(abs(x)*100, "%"), limits = c(-1, 1)) +
+  theme(axis.text.y = element_text(size=12, colour = "black"),
+        plot.title = element_text(size=11, face="bold"),
+        legend.position = "top",
+        legend.key.size = unit(0.3, "cm"),
+        axis.ticks = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank()) 
+
+# Create Another Response Graph
+not_sure_bars <- not_sure_etc %>% 
+  ggplot(aes(x = fct_rev(var), y = pct_not_sure)) + # need to reverse the factor because coord_flip reverses the order
+  geom_col(aes(fill=not_sure_string), width = 0.7) +
+  geom_text(aes(label = pct_neat), hjust = -0.05, size = 3.5, fontface = "bold") +
+  coord_flip() +
+  scale_fill_manual(values = "lightgrey") +
+  ggtitle("") +
+  # labs(caption = "Another response includes 'Not Sure,' and 'Neither Agree nor Disagree'") +
+  xlab("") +
+  ylab("") +
+  ylim(0, .5) + 
+  theme_bw() +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  theme(legend.position = "top",
+        legend.title = element_blank(),
+        legend.key.size = unit(0.3, "cm"),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank())
+
+
+likert_belong_dept + not_sure_bars + plot_layout(widths = c(4, 1))
+
+# Write out graph
+likert_belong_dept + not_sure_bars + plot_layout(widths = c(4, 1)) -> x
+
+#ggsave(paste0("../Out/PPT Plots/emp_dept_belonging_wide_", params$collegename, ".png"), plot = x, width = 10, height = 6, dpi = 300)
+
+
+```
+
+{{< pagebreak >}}
+### Fair and Equal Treatment
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 8
+#| fig-width: 8
+
+n_fair_equal <- employee_survey %>%
+  select(responseid, opportunity_01:opportunity_08) %>%
+  pivot_longer(cols = opportunity_01:opportunity_08,
+               names_to = "var",
+               values_to = "response") %>%
+  filter(!is.na(response)) %>%
+  distinct(responseid) %>%
+  nrow()
+
+# get dataframe with not sure responses 
+not_sure_etc <- employee_survey %>%
+    select(responseid, starts_with("opportunity_")) %>%
+    pivot_longer(cols = opportunity_01:opportunity_08,
+               names_to = "var",
+               values_to = "response") %>%
+  mutate(response = as_factor(response, levels = "labels")) %>%
+  filter(!is.na(response)) %>%
+  mutate(not_sure = ifelse(response %in% c("Neither agree nor disagree", "Not Sure", "Neither Agree nor Disagree"),1,0)) %>%
+  count(var, not_sure) %>%
+  group_by(var) %>%
+  mutate(pct_not_sure = n/sum(n)) %>%
+  filter(not_sure == 1) %>%
+  mutate(pct_neat = paste0(round(pct_not_sure *100, 0), "%")) %>%
+  mutate(not_sure_string = "Another response")
+
+# Get likert graph for fair and equal treatment items
+likert_fair_equal_treat <- gglikert(employee_survey, 
+         include = opportunity_01:opportunity_08, 
+         exclude_fill_values = c("Neither agree nor disagree", "Not Applicable", "Not Sure", "Neither Agree nor Disagree"),
+         variable_labels = c(
+            opportunity_01 = "Contribute to goals and priorities",
+            opportunity_02 = "Share opinions and suggestions about how best to support our students",
+            opportunity_03 = "Be considered for positions on committees",
+            opportunity_04 = "Be considered for positions for institution-wide initiatives",
+            opportunity_05 = "Access resources and services to support my professional growth",
+            opportunity_06 = "Participate in the program review budget process",
+            opportunity_07 = "Express my opinions and suggestions safely",
+            opportunity_08 = "Be considered for job advancement opportunities"),
+         reverse_likert = TRUE,
+         add_totals = TRUE,
+         add_labels = FALSE,
+         labels_hide_below = .01,
+         y_label_wrap = 40,
+         width = 0.7) + 
+  scale_fill_manual(values = scale_colors) +
+  ggtitle("I feel that I have the same opportunity as any other employee\n at the college/district to...", subtitle = paste0("n=", scales::comma(n_fair_equal))) +
+  geom_vline(xintercept=0) +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  scale_x_continuous(labels = function(x) paste0(abs(x)*100, "%"), limits = c(-1, 1)) +
+  theme(axis.text.y = element_text(size=12, colour = "black"),
+        plot.title = element_text(size=11, face="bold"),
+        legend.position = "top",
+        legend.key.size = unit(0.3, "cm"),
+        axis.ticks = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank()) 
+
+# Create Another Response Graph
+not_sure_bars <- not_sure_etc %>% 
+  ggplot(aes(x = fct_rev(var), y = pct_not_sure)) + # need to reverse the factor because coord_flip reverses the order
+  geom_col(aes(fill=not_sure_string), width = 0.7) +
+  geom_text(aes(label = pct_neat), hjust = -0.05, size = 3.5, fontface = "bold") +
+  coord_flip() +
+  scale_fill_manual(values = "lightgrey") +
+  ggtitle("") +
+  # labs(caption = "Another response includes 'Not Sure,' and 'Neither Agree nor Disagree'") +
+  xlab("") +
+  ylab("") +
+  ylim(0, .5) + 
+  theme_bw() +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  theme(legend.position = "top",
+        legend.title = element_blank(),
+        legend.key.size = unit(0.3, "cm"),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank())
+
+
+likert_fair_equal_treat + not_sure_bars + plot_layout(widths = c(4, 1))
+
+# Write out graph
+likert_fair_equal_treat + not_sure_bars + plot_layout(widths = c(4, 1)) -> x
+
+#ggsave(paste0("../Out/PPT Plots/emp_fair_equal_treatment_wide_", params$collegename, ".png"), plot = x, width = 10, height = 6, dpi = 300)
+
+```
+
+
+{{< pagebreak >}}
+## Diversity, Equity, Inclusion and Accessibility
+
+### Racial Tension
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 2.5
+#| fig-width: 8
+
+n_racialtension <- employee_survey %>%
+  filter(racialtension != "") %>%
+  nrow()
+
+employee_survey %>%
+  # convert to yes/no/not sure
+  mutate(racialtension2 = case_when(racialtension %in% c("Yes", "Strongly Agree", "Agree") ~ "Yes",
+                                   racialtension %in% c("No", "Strongly Disagree", "Disagree") ~ "No",
+                                   racialtension %in% c("Not Sure", "Not Applicable", "Neither Agree nor Disagree") ~ "Not Sure",
+                                   TRUE ~ NA_character_)) %>%
+  count(racialtension2) %>%
+  ungroup() %>%
+  filter(!is.na(racialtension2)) %>%
+  mutate(racialtension2 = factor(racialtension2, levels = c("No", "Not Sure", "Yes"))) %>%
+  mutate(text_color = ifelse(racialtension2 == "Yes", "group1", "group2")) %>%
+  mutate(pct = n/sum(n),
+         pct_neat = paste0(round(pct * 100, 0), "%")) %>%
+  
+  ggplot(aes(x = 1, y = pct, fill = racialtension2)) +
+  geom_col() +
+  coord_flip() +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  scale_fill_manual(values = c("#035157", "lightgrey", "#DF6B2A")) +
+  
+  geom_text(aes(label = pct_neat, color = racialtension2), position = position_stack(vjust = 0.5)) +
+  scale_color_manual(values = c("white", "black", "black")) +
+  guides(color = "none") +
+  
+  labs(x = "", y = "", caption="Yes includes Strongly Agree and Agree, No includes Strongly Disagree and Disagree") +
+  
+  ggtitle(paste0("In the past year, have you felt racial tension? (n=", n_racialtension, ")")) +
+  theme_bw() + 
+  theme(plot.title = element_text(size=12, face="bold", hjust=0.5),
+        legend.position = "top",
+        legend.title = element_blank(),
+        legend.key.size = unit(0.3, "cm"),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank()) 
+
+# gglikert(employee_survey, 
+#          include = racialtension,
+#          exclude_fill_values = c("Not Sure"),
+#          reverse_likert = TRUE,
+#          add_totals = FALSE,
+#          labels_hide_below = .01,
+#          width = 0.6) + 
+#   scale_fill_manual(values = c("#DF6B2A", "#035157")) +
+#   ggtitle(paste0("In the past year, have you felt racial tension at ", params$collegename, "?")) +
+#   guides(fill=guide_legend(reverse=TRUE)) +
+#   labs(caption = "Graph excludes 'Not Sure' responses") +
+#   scale_x_continuous(labels = function(x) paste0(abs(x)*100, "%"), limits = c(-1, 1)) +
+#   theme(axis.text.y = element_blank(),
+#         legend.position = "top",
+#         panel.grid.major = element_blank(),
+#         panel.grid.minor = element_blank(),
+#         panel.border = element_blank(),
+#         panel.background = element_blank()) 
+
+
+
+```
+
+{{< pagebreak >}}
+### Experiences with Discrimination
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 8
+#| fig-width: 8
+
+did_not_answer_discrimination_ids <- employee_survey %>%
+  select(responseid, starts_with("disc_exp") | starts_with("disc_wit") | starts_with("disc_none")) %>% 
+  pivot_longer(cols = disc_exp_age:disc_none_sexorien,
+               names_to = "var",
+               values_to = "response"
+  ) %>%
+  group_by(responseid) %>%
+  count(response) %>%
+  mutate(total = sum(n)) %>%
+  filter(is.na(response) & n == total) %>%
+  pull(responseid)
+
+n_discrimination <- employee_survey %>%
+  filter(!responseid %in% did_not_answer_discrimination_ids) %>%
+  nrow()
+
+# Create New Var for Each Discrimination Category: Witnessed OR Experienced
+df_disc <- employee_survey %>%
+  filter(!responseid %in% did_not_answer_discrimination_ids) %>%
+  select(responseid, contains("disc_exp") | contains("disc_wit")) %>%
+  mutate(
+         disc_woe_age = ifelse(disc_wit_age + disc_exp_age > 0, 1, 0),
+         disc_woe_ancestry = ifelse(disc_wit_ancestry + disc_exp_ancestry > 0, 1, 0),
+         disc_woe_lang = ifelse(disc_wit_lang + disc_exp_lang > 0, 1, 0),
+         disc_woe_imm = ifelse(disc_wit_imm + disc_exp_imm > 0, 1, 0),
+         disc_woe_gend = ifelse(disc_wit_gend + disc_exp_gend > 0, 1, 0),
+         disc_woe_genetic = ifelse(disc_wit_genetic + disc_exp_genetic > 0, 1, 0),
+         disc_woe_inc = ifelse(disc_wit_inc + disc_exp_inc > 0, 1, 0),
+         disc_woe_marital = ifelse(disc_wit_marital + disc_exp_marital > 0, 1, 0),
+         disc_woe_medical = ifelse(disc_wit_medical + disc_exp_medical > 0, 1, 0),
+         disc_woe_mil = ifelse(disc_wit_mil + disc_exp_mil > 0, 1, 0),
+         disc_woe_cit = ifelse(disc_wit_cit + disc_exp_cit > 0, 1, 0),
+         disc_woe_parent = ifelse(disc_wit_parent + disc_exp_parent > 0, 1, 0),
+         disc_woe_ability = ifelse(disc_wit_ability + disc_exp_ability > 0, 1, 0),
+         disc_woe_politics = ifelse(disc_wit_politics + disc_exp_politics > 0, 1, 0),
+         disc_woe_race = ifelse(disc_wit_race + disc_exp_race > 0, 1, 0),
+         disc_woe_religion = ifelse(disc_wit_religion + disc_exp_religion > 0, 1, 0),
+         disc_woe_sexorien = ifelse(disc_wit_sexorien + disc_exp_sexorien > 0, 1, 0)) %>%
+  mutate(disc_wit_any = ifelse(disc_wit_age + disc_wit_ancestry + disc_wit_lang + 
+                                 disc_wit_imm + disc_wit_gend + disc_wit_genetic +
+                                 disc_wit_inc + disc_wit_marital + disc_wit_medical + 
+                                 disc_wit_mil + disc_wit_cit + disc_wit_parent + 
+                                 disc_wit_ability + disc_wit_politics + disc_wit_race + 
+                                 disc_wit_religion + disc_wit_sexorien > 0, 1, 0),
+         disc_exp_any = ifelse(disc_exp_age + disc_exp_ancestry + disc_exp_lang + 
+                                 disc_exp_imm + disc_exp_gend + disc_exp_genetic +
+                                 disc_exp_inc + disc_exp_marital + disc_exp_medical + 
+                                 disc_exp_mil + disc_exp_cit + disc_exp_parent + 
+                                 disc_exp_ability + disc_exp_politics + disc_exp_race + 
+                                 disc_exp_religion + disc_exp_sexorien > 0, 1, 0),
+         disc_woe_any = ifelse(disc_woe_age + disc_woe_ancestry + disc_woe_lang + 
+                                 disc_woe_imm + disc_woe_gend + disc_woe_genetic +
+                                 disc_woe_inc + disc_woe_marital + disc_woe_medical + 
+                                 disc_woe_mil + disc_woe_cit + disc_woe_parent + 
+                                 disc_woe_ability + disc_woe_politics + disc_woe_race + 
+                                 disc_woe_religion + disc_woe_sexorien > 0, 1, 0)) %>%
+  pivot_longer(cols = disc_exp_age:disc_woe_any,
+               names_to = "var",
+               values_to = "response") %>%
+  mutate(response = as_factor(response, levels = "labels"))
+
+disc_items_all <- df_disc %>%
+  group_by(var) %>%
+  count(response) %>%
+  mutate(group = "All") %>%
+  mutate(disagg = "None") %>%
+  mutate(item = case_when(grepl("_exp_", var) ~ "Experienced Discrimination",
+                          grepl("_wit_", var) ~ "Witnessed Discrimination",
+                          grepl("_woe_", var) ~ "Witnessed or Experienced\nDiscrimination")) %>%
+  mutate(item = factor(item, levels = c("Witnessed Discrimination", "Experienced Discrimination", "Witnessed or Experienced\nDiscrimination"))) %>%
+  mutate(total = sum(n),
+         pct = n/sum(n)) %>%
+  select(var, disagg, group, item, response, n, total, pct) %>%
+  filter(response == "Checked") %>% 
+  mutate(var_label = case_when(grepl("age", var) ~ "Age",
+                               grepl("ancestry", var) ~ "Ancestry",
+                               grepl("lang", var) ~ "English language proficiency/accent",
+                               grepl("imm", var) ~ "Immigration status",
+                               grepl("gend", var) ~ "Gender identity/gender expression",
+                               grepl("genetic", var) ~ "Genetic information",
+                               grepl("inc", var) ~ "Income status",
+                               grepl("marital", var) ~ "Marital status",
+                               grepl("medical", var) ~ "Medical condition",
+                               grepl("mil", var) ~ "Military/veteran status",
+                               grepl("cit", var) ~ "National origin/citizen status",
+                               grepl("parent", var) ~ "Parental/guardian status",
+                               grepl("ability", var) ~ "Physical or learning disability",
+                               grepl("politics", var) ~ "Political orientation",
+                               grepl("race", var) ~ "Race/ethnicity",
+                               grepl("religion", var) ~ "Religion",
+                               grepl("sexorien", var) ~ "Sexual orientation",
+                               grepl("any", var) ~ "Selected any of the above")) %>%
+  mutate(var_label = factor(var_label, levels = 
+                              c("Age", "Ancestry", "English language proficiency/accent", "Immigration status", 
+                                "Gender identity/gender expression", "Genetic information", "Income status", "Marital status",
+                                "Medical condition", "Military/veteran status", "National origin/citizen status", 
+                                "Parental/guardian status", "Physical or learning disability", "Political orientation",
+                                "Race/ethnicity", "Religion", "Sexual orientation",
+                                "Selected any of the above"))) %>%
+  mutate(pct_neat = paste0(round(pct * 100, 0), "%"))
+
+
+disc_items_all %>%
+  ggplot(aes(x = pct, y = fct_rev(var_label))) +
+  geom_col(fill = "#035157", width = 0.6) +
+  geom_text(data = disc_items_all %>% filter(var_label == "Selected any of the above"), 
+            aes(label = pct_neat, hjust = 0.99), color = "white", fontface = "bold") + 
+  geom_text(data = disc_items_all %>% filter(var_label != "Selected any of the above"), 
+            aes(label = pct_neat, hjust = -0.01), color = "black", fontface = "bold") +
+  facet_wrap(~item) +
+  scale_y_discrete(labels = function(x) str_wrap(x, width = 35)) +
+  scale_x_continuous(labels = scales::percent) +
+  ggtitle("Have you personally experienced or witnessed discrimination\nat your college based on the following protected classes?", subtitle = paste0("n=", scales::comma(n_discrimination))) +
+  xlab("") +
+  ylab("Type of Discrimination") +
+  theme_bw() +
+  theme(axis.ticks = element_blank(),
+        plot.title = element_text(size=12, face="bold"),
+        axis.text.y = element_text(size = 12, color = "black"),
+        axis.text.x = element_blank(),
+        strip.background = element_rect(colour = "#FFF1DB", fill = "#FFF1DB"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank())
+
+```
+
+{{< pagebreak >}}
+### Experiences with Microaggressions
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 6
+#| fig-width: 8
+
+did_not_answer_microagg_ids <- employee_survey %>%
+  select(responseid, starts_with("microagg_exp") | starts_with("microagg_wit") | starts_with("microagg_none")) %>% 
+  pivot_longer(cols = microagg_exp_01:microagg_none_06,
+               names_to = "var",
+               values_to = "response"
+  ) %>%
+  group_by(responseid) %>%
+  count(response) %>%
+  mutate(total = sum(n)) %>%
+  filter(is.na(response) & n == total) %>%
+  pull(responseid)
+
+n_microaggressions <- employee_survey %>%
+  filter(!responseid %in% did_not_answer_microagg_ids) %>%
+  nrow()
+
+df_microaggressions <- employee_survey %>%
+  filter(!responseid %in% did_not_answer_microagg_ids) %>%
+  select(responseid, contains("microagg_exp") | contains("microagg_wit")) %>%
+  mutate(microagg_woe_01 = ifelse(microagg_wit_01 + microagg_exp_01 > 0, 1, 0),
+         microagg_woe_02 = ifelse(microagg_wit_02 + microagg_exp_02 > 0, 1, 0),
+         microagg_woe_03 = ifelse(microagg_wit_03 + microagg_exp_03 > 0, 1, 0),
+         microagg_woe_04 = ifelse(microagg_wit_04 + microagg_exp_04 > 0, 1, 0),
+         microagg_woe_05 = ifelse(microagg_wit_05 + microagg_exp_05 > 0, 1, 0),
+         microagg_woe_06 = ifelse(microagg_wit_06 + microagg_exp_06 > 0, 1, 0)) %>%
+  mutate(microagg_wit_any = ifelse(microagg_wit_01 + microagg_wit_02 + microagg_wit_03 + 
+                                     microagg_wit_04 + microagg_wit_05 + microagg_wit_06 > 0, 1, 0),
+         microagg_exp_any = ifelse(microagg_exp_01 + microagg_exp_02 + microagg_exp_03 +
+                                     microagg_exp_04 + microagg_exp_05 + microagg_exp_06 > 0, 1, 0),
+         microagg_woe_any = ifelse(microagg_woe_01 + microagg_woe_02 + microagg_woe_03 +
+                                        microagg_woe_04 + microagg_woe_05 + microagg_woe_06 > 0, 1, 0)) %>%
+  pivot_longer(cols = microagg_exp_01:microagg_woe_any,
+               names_to = "var",
+               values_to = "response") %>%
+  mutate(response = as_factor(response, levels = "labels"))
+
+microaggressions_items_all <- df_microaggressions %>%
+  group_by(var) %>%
+  count(response) %>%
+  mutate(group = "All") %>%
+  mutate(disagg = "None") %>%
+  mutate(item = case_when(grepl("_exp_", var) ~ "Experienced Microaggression",
+                          grepl("_wit_", var) ~ "Witnessed Microaggression",
+                          grepl("_woe_", var) ~ "Witnessed or Experienced\nMicroaggression")) %>%
+  mutate(item = factor(item, levels = c("Witnessed Microaggression", "Experienced Microaggression", "Witnessed or Experienced\nMicroaggression"))) %>%
+  mutate(total = sum(n),
+         pct = n/sum(n)) %>%
+  select(var, disagg, group, item, response, n, total, pct) %>%
+  filter(response == "Checked") %>%
+  mutate(var2 = substr(var, 14, 16)) %>%
+  mutate(var_label = case_when(var2 == "01" ~ "Verbal or nonverbal attacks meant to hurt you or someone else",
+                               var2 == "02" ~ "Communications that exclude, negate, or nullify your or someone else’s thoughts, feelings, or reality",
+                               var2 == "03" ~ "People assuming you or someone else would not be as intelligent based on your/their identity",
+                               var2 == "04" ~ "People assuming you or someone else were dangerous, criminal, or deviant based on your/their identity",
+                               var2 == "05" ~ "People assuming things about your or someone else’s character based on your/their identity",
+                               var2 == "06" ~ "Having a person be given preferential treatment over you or someone else because of your/their identity",
+                               var2 == "any" ~ "Selected any of the above")) %>%
+  mutate(var_label = factor(var_label, levels = 
+                              c("Verbal or nonverbal attacks meant to hurt you or someone else", 
+                                "Communications that exclude, negate, or nullify your or someone else’s thoughts, feelings, or reality",
+                                "People assuming you or someone else would not be as intelligent based on your/their identity",
+                                "People assuming you or someone else were dangerous, criminal, or deviant based on your/their identity",
+                                "People assuming things about your or someone else’s character based on your/their identity",
+                                "Having a person be given preferential treatment over you or someone else because of your/their identity",
+                                "Selected any of the above"))) %>%
+  mutate(pct_neat = paste0(round(pct * 100, 0), "%"))
+
+microaggressions_items_all %>%
+  ggplot(aes(x = pct, y = fct_rev(var_label))) +
+  geom_col(fill = "#035157", width = 0.6) +
+  geom_text(data = microaggressions_items_all %>% filter(var_label == "Selected any of the above"),
+            aes(label = pct_neat, hjust = 0.99), color = "white", fontface = "bold") +
+  geom_text(data = microaggressions_items_all %>% filter(var_label != "Selected any of the above"),
+            aes(label = pct_neat, hjust = -0.01), color = "black", fontface = "bold") +
+  ggtitle("Have you personally experienced or witnessed any of the\nfollowing types of microaggressions at your college?", subtitle = paste0("n=", scales::comma(n_microaggressions))) +
+  facet_wrap(~item) +
+  scale_y_discrete(labels = function(x) str_wrap(x, width = 35)) +
+  scale_x_continuous(labels = scales::percent) +
+  xlab("") +
+  ylab("Type of Microaggression") +
+  theme_bw() +
+  theme(text = element_text(color = "black"),
+        plot.title = element_text(size=12, face="bold"),
+        axis.ticks = element_blank(),
+        axis.text.y = element_text(size = 11, color = "black"),
+        axis.text.x = element_text(colour = "black"),
+        #strip.text.y = element_text(size=9, face="bold"),
+        strip.background = element_rect(colour = "#FFF1DB", fill = "#FFF1DB"),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank())
+
+
+```
+
+{{< pagebreak >}}
+### Experiences with Microaggressions among BIPOC Employees
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+n_provided_race <- employee_survey %>% filter(BIPOC_Flag != "Did not provide Race/Ethnicity") %>% nrow()
+
+# Get Percent of Respondents who are BIPOC
+pct_BIPOC <- employee_survey %>% 
+  filter(BIPOC_Flag != "Did not provide Race/Ethnicity") %>%
+  count(BIPOC_Flag) %>% mutate(total = sum(n)) %>% 
+  mutate(pct_neat = paste0(round(n/total * 100, 1), "%")) %>% 
+  filter(BIPOC_Flag == "BIPOC") %>% pull(pct_neat)
+```
+
+BIPOC is a term used to acknowledge the historic and ongoing experiences of systemic exclusion, marginalization and inequality faced by African American/Black, Indigenous, and other People of Color. Of the `r scales::comma(n_provided_race)` respondents who reported their Race/Ethnicity, `r pct_BIPOC` identified as BIPOC, meaning they selected at least one of the following race/ethnicity categories: African American/Black, American Indian/Alaska Native, Asian, Latine/Hispanic, Middle Eastern, Arab, or Arab American, or Native Hawaiian or Pacific Islander. The following section presents a comparison of reported experiences with microaggressions between respondents who identified as BIPOC and those who responded to the race/ethnicity item but did not identify as BIPOC.
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 6
+#| fig-width: 8
+
+df_bipoc <- employee_survey %>%
+  select(responseid, BIPOC_Flag)
+
+df_microaggressions_BIPOC <- df_microaggressions %>%
+  left_join(df_bipoc)
+
+microaggressions_items_BIPOC <- df_microaggressions %>%
+  # join BIPOC flag
+  left_join(df_bipoc) %>%
+  # Exclude those who did not provide race/ethnicity
+  filter(BIPOC_Flag != "Did not provide Race/Ethnicity") %>%
+  group_by(var, BIPOC_Flag) %>%
+  count(response) %>%
+  rename(group = BIPOC_Flag) %>%
+  mutate(disagg = "BIPOC") %>%
+  mutate(item = case_when(grepl("_exp_", var) ~ "Experienced Microaggression",
+                          grepl("_wit_", var) ~ "Witnessed Microaggression",
+                          grepl("_woe_", var) ~ "Witnessed or Experienced\nMicroaggression")) %>%
+  mutate(item = factor(item, levels = c("Witnessed Microaggression", "Experienced Microaggression", "Witnessed or Experienced\nMicroaggression"))) %>%
+  mutate(total = sum(n),
+         pct = n/sum(n)) %>%
+  select(var, disagg, group, item, response, n, total, pct) %>%
+  filter(response == "Checked") %>%
+  mutate(var2 = substr(var, 14, 16)) %>%
+  mutate(var_label = case_when(var2 == "01" ~ "Verbal or nonverbal attacks meant to hurt you or someone else",
+                               var2 == "02" ~ "Communications that exclude, negate, or nullify your or someone else’s thoughts, feelings, or reality",
+                               var2 == "03" ~ "People assuming you or someone else would not be as intelligent based on your/their identity",
+                               var2 == "04" ~ "People assuming you or someone else were dangerous, criminal, or deviant based on your/their identity",
+                               var2 == "05" ~ "People assuming things about your or someone else’s character based on your/their identity",
+                               var2 == "06" ~ "Having a person be given preferential treatment over you or someone else because of your/their identity",
+                               var2 == "any" ~ "Selected any of the above")) %>%
+  mutate(var_label = factor(var_label, levels = 
+                              c("Verbal or nonverbal attacks meant to hurt you or someone else", 
+                                "Communications that exclude, negate, or nullify your or someone else’s thoughts, feelings, or reality",
+                                "People assuming you or someone else would not be as intelligent based on your/their identity",
+                                "People assuming you or someone else were dangerous, criminal, or deviant based on your/their identity",
+                                "People assuming things about your or someone else’s character based on your/their identity",
+                                "Having a person be given preferential treatment over you or someone else because of your/their identity",
+                                "Selected any of the above"))) %>%
+  mutate(pct_neat = paste0(round(pct * 100, 0), "%"))
+
+
+# Get Witnessed or Experienced Microaggression Only
+witnessed_or_experienced_bipoc <- microaggressions_items_BIPOC %>%
+  ungroup() %>% 
+  filter(item == "Witnessed or Experienced\nMicroaggression") %>%
+# Figure out which value is larger by variable so we can nudge text to the left or right correctly
+group_by(var) %>%
+  mutate(max_pct = ifelse(max(pct, na.rm = TRUE) == pct, 1, 0)) %>%
+  ungroup()
+
+# Get Experienced Microaggressions Only (On 7.29.25 changed to only show experienced microagressions on graph)
+experienced_bipoc <- microaggressions_items_BIPOC %>%
+  ungroup() %>% 
+  filter(item == "Experienced Microaggression") %>%
+# Figure out which value is larger by variable so we can nudge text to the left or right correctly
+group_by(var) %>%
+  mutate(max_pct = ifelse(max(pct, na.rm = TRUE) == pct, 1, 0)) %>%
+  ungroup()
+  
+
+nudge_value = 0.05
+# Dumbell Plot
+experienced_bipoc %>%
+  ggplot(aes(x = pct, y = fct_rev(var_label))) +
+  geom_line(color="#E7E7E7", linewidth=3.5) + 
+  geom_point(aes(color = group), size = 3) +
+  geom_text(aes(label=pct_neat),
+            color = "black",
+            fontface="bold",
+            size=3.5,
+            alpha = 1,
+            nudge_x=if_else(
+              experienced_bipoc$max_pct == 1, # if it's the larger value...
+              nudge_value,   # move it to the right of the point
+              -nudge_value)) + # otherwise, move it to the left of the point
+  scale_color_manual(values = c("#32c0d2", "#035157")) +
+  scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
+  scale_y_discrete(labels = function(x) str_wrap(x, width = 45)) +
+  ggtitle("Have you personally experienced or witnessed any\nof the following types of microaggressions at your\ncollege?") + 
+  labs(x = "", y = "") +
+  theme_bw() +
+  theme(text = element_text(colour = "black", family="arial"),
+        plot.title = element_text(size=12, face="bold"),
+        axis.ticks = element_blank(),
+        axis.text.y = element_text(size = 12, colour = "black"),
+        legend.position = "top",
+        legend.title = element_blank(),
+        guide_legend(reverse=FALSE),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank())
+
+# Bar Graph ---------------------------------------
+# witnessed_or_experienced_bipoc %>%
+#   ggplot(aes(x = pct, y = fct_rev(var_label), group = group, fill = group)) +
+#   geom_col(position="dodge") +
+#   geom_text(aes(label = paste0(round(pct * 100, 1), "%"), hjust = 0.99), position = position_dodge(width = .9), color = "white") +
+#   # facet_wrap(~group) +
+#   scale_y_discrete(labels = function(x) str_wrap(x, width = 35)) +
+#   scale_x_continuous(labels = scales::percent) +
+#   xlab("") +
+#   ylab("Type of Microaggression") +
+#   theme_bw() +
+#   theme(axis.ticks = element_blank(),
+#         axis.text.y = element_text(size = 10), color = "black",
+#         legend.position = "top",
+#         legend.title = element_blank(),
+#         guide_legend(reverse=FALSE),
+#         panel.grid.major = element_blank(),
+#         panel.grid.minor = element_blank(),
+#         panel.border = element_blank(),
+#         panel.background = element_blank())
+```
+
+
+
+{{< pagebreak >}}
+## Safety and Security
+
+### Physical Safety
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 6
+#| fig-width: 8
+
+n_physical_safety <- employee_survey %>%
+  select(responseid, safety_01:safety_05) %>%
+  pivot_longer(cols = safety_01:safety_05,
+               names_to = "var",
+               values_to = "response") %>%
+  filter(!is.na(response)) %>%
+  distinct(responseid) %>%
+  nrow()
+
+# get dataframe with not applicable responses 
+not_sure_etc <- employee_survey %>%
+    select(responseid, starts_with("safety_")) %>%
+    pivot_longer(cols = safety_01:safety_05,
+               names_to = "var",
+               values_to = "response") %>%
+  mutate(response = as_factor(response, levels = "labels")) %>%
+  filter(!is.na(response)) %>%
+  mutate(not_sure = ifelse(response %in% c("Not applicable"),1,0)) %>%
+  count(var, not_sure) %>%
+  group_by(var) %>%
+  mutate(pct_not_sure = n/sum(n)) %>%
+  filter(not_sure == 1) %>%
+  mutate(pct_neat = paste0(round(pct_not_sure *100, 0), "%")) %>%
+  mutate(not_sure_string = "Not applicable")
+
+
+# Get likert graph for fair and equal treatment items
+likert_phys_safety <- gglikert(employee_survey, 
+         include = safety_01:safety_05, 
+         exclude_fill_values = c("Not applicable"),
+         variable_labels = c(
+            safety_01 = "On campus when it is light out",
+            safety_02 = "On campus when it is dark out",
+            safety_03 = "In the restrooms on campus",
+            safety_04 = "In the parking lots on campus",
+            safety_05 = "In my workspace/classroom"),
+         reverse_likert = TRUE,
+         add_totals = TRUE,
+         add_labels = FALSE,
+         labels_hide_below = .01,
+         y_label_wrap = 40,
+         width = 0.7) + 
+  scale_fill_manual(values = scale_colors) +
+  ggtitle("In general, how safe do you feel in the following locations?", subtitle = paste0("n=", scales::comma(n_physical_safety))) +
+  geom_vline(xintercept=0) +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  scale_x_continuous(labels = function(x) paste0(abs(x)*100, "%"), limits = c(-1, 1.05)) +
+  theme(text = element_text(family = "arial"),
+        axis.text.y = element_text(size=12, colour = "black"),
+        plot.title = element_text(size=11, face="bold"),
+        legend.position = "top",
+        legend.key.size = unit(0.3, "cm"),
+        axis.ticks = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank()) 
+
+# Create Not Applicable Graph
+not_sure_bars <- not_sure_etc %>% 
+  ggplot(aes(x = fct_rev(var), y = pct_not_sure)) + # need to reverse the factor because coord_flip reverses the order
+  geom_col(aes(fill=not_sure_string), width = 0.7) +
+  geom_text(aes(label = pct_neat), hjust = -0.05, size = 3.5, fontface = "bold") +
+  coord_flip() +
+  scale_fill_manual(values = "lightgrey") +
+  ggtitle("") +
+  xlab("") +
+  ylab("") +
+  ylim(0, .5) + 
+  theme_bw() +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  theme(legend.position = "top",
+        legend.title = element_blank(),
+        legend.key.size = unit(0.3, "cm"),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank())
+
+
+likert_phys_safety + not_sure_bars + plot_layout(widths = c(4, 1))
+
+
+```
+
+{{< pagebreak >}}
+### Psychological Safety
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 2.5
+#| fig-width: 8
+
+n_psychological_safety <- employee_survey %>%
+  select(engage_07) %>%
+  filter(!is.na(engage_07)) %>%
+  nrow()
+
+employee_survey %>%
+  count(engage_07) %>%
+  ungroup() %>%
+  mutate(response = as_factor(engage_07, levels = "labels")) %>%
+  filter(!is.na(response)) %>%
+  mutate(response = factor(response, levels = c("Very true", "Somewhat true", "Not at all true"))) %>%
+  mutate(text_color = ifelse(response == "Not at all true", "group1", "group2")) %>%
+  mutate(pct = n/sum(n),
+         pct_neat = paste0(round(pct * 100, 0), "%")) %>%
+  
+  ggplot(aes(x = 1, y = pct, fill = response)) +
+  geom_col() +
+  coord_flip() +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  scale_fill_manual(values = c("#035157", "#179CA6", "#DF6B2A")) +
+  
+  geom_text(aes(label = pct_neat, color = response), position = position_stack(vjust = 0.5)) +
+  scale_color_manual(values = c("white", "black", "black")) +
+  guides(color = "none") +
+  
+  labs(x = "", y = "") +
+  ggtitle(paste0("I feel safe being my authentic self at work (n=", scales::comma(n_psychological_safety), ")")) +
+  theme_bw() + 
+  theme(plot.title = element_text(size=12, face = "bold", hjust = 0.5),
+        legend.position = "top",
+        legend.title = element_blank(),
+        legend.key.size = unit(0.3, "cm"),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank()) 
+  
+
+
+# gglikert(employee_survey, 
+#          include = engage_07, 
+#          exclude_fill_values = c("Somewhat true"),
+#          variable_labels = c(
+#             engage_07 = "I feel safe being my authentic self at work"),
+#          y_label_wrap = 35,
+#          # reverse_likert = TRUE,
+#          add_totals = FALSE,
+#          labels_hide_below = .01) + 
+#   scale_fill_manual(values = c("#DF6B2A", "#035157")) +
+#   ggtitle("When thinking specifically about your experience in the \nlast year, how true are the following about your experiences?") +
+#    geom_vline(xintercept=0) +
+#   # guides(fill = guide_legend(reverse = TRUE)) +
+#   labs(caption = "Graph excludes 'Somewhat true' responses") +
+#   scale_x_continuous(labels = function(x) paste0(abs(x)*100, "%"), limits = c(-1, 1)) +
+#   theme(axis.text.y = element_text(size=10, colour = "black"),
+#         legend.position = "top",
+#         axis.ticks = element_blank(),
+#         panel.grid.major = element_blank(),
+#         panel.grid.minor = element_blank(),
+#         panel.border = element_blank(),
+#         panel.background = element_blank()) 
+```
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 6
+#| fig-width: 8
+
+n_feedback <- employee_survey %>%
+     select(responseid, belong_coll_06, belong_dept_06, belong_coll_07, belong_dept_07) %>%
+    pivot_longer(cols = belong_coll_06:belong_dept_07,
+               names_to = "var",
+               values_to = "response") %>%
+  filter(!is.na(response)) %>%
+  distinct(responseid) %>%
+  nrow()
+
+# get dataframe with not sure responses 
+not_sure_etc <- employee_survey %>%
+    select(responseid, belong_coll_06, belong_dept_06, belong_coll_07, belong_dept_07) %>%
+    pivot_longer(cols = belong_coll_06:belong_dept_07,
+               names_to = "var",
+               values_to = "response") %>%
+  mutate(response = as_factor(response, levels = "labels")) %>%
+  filter(!is.na(response)) %>%
+  mutate(not_sure = ifelse(response %in% c("Neither agree nor disagree", "Not Sure", "Neither Agree nor Disagree"),1,0)) %>%
+  count(var, not_sure) %>%
+  group_by(var) %>%
+  mutate(pct_not_sure = n/sum(n)) %>%
+  filter(not_sure == 1) %>%
+  mutate(pct_neat = paste0(round(pct_not_sure *100, 0), "%")) %>%
+  mutate(not_sure_string = "Another response")
+
+# Get likert graph for fair and equal treatment items
+likert_psychological_safety <- gglikert(employee_survey, 
+         include = c(belong_coll_06, belong_dept_06, belong_coll_07, belong_dept_07),
+         exclude_fill_values = c("Neither agree nor disagree", "Not Applicable", "Not Sure", "Neither Agree nor Disagree"),
+         variable_labels = c(
+           belong_coll_06 = "At my college, I feel I can provide critical feedback without fear of retaliation",
+           belong_dept_06 = "In my department/area, I feel I can provide critical feedback without fear of retaliation",
+           belong_coll_07 = "At my college, I feel safe to express my opinions",
+           belong_dept_07 = "In my department/area, I feel safe to express my opinions"),
+         reverse_likert = TRUE,
+         add_totals = TRUE,
+         add_labels = FALSE,
+         labels_hide_below = .01,
+         y_label_wrap = 40,
+         width = 0.7) + 
+  scale_fill_manual(values = scale_colors) +
+  ggtitle("Reflecting on your experiences, please mark your level\nof agreement:", subtitle = paste0("n=", scales::comma(n_feedback))) +
+  geom_vline(xintercept=0) +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  scale_x_continuous(labels = function(x) paste0(abs(x)*100, "%"), limits = c(-1, 1)) +
+  theme(axis.text.y = element_text(size=12, colour = "black"),
+        plot.title = element_text(size=11, face="bold"),
+        legend.position = "top",
+        legend.key.size = unit(0.3, "cm"),
+        axis.ticks = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank()) 
+
+# Create Another Response Graph
+not_sure_bars <- not_sure_etc %>% 
+  mutate(var = factor(var, levels = c("belong_coll_06", "belong_dept_06", "belong_coll_07", "belong_dept_07"))) %>%
+  ggplot(aes(x = fct_rev(var), y = pct_not_sure)) + # need to reverse the factor because coord_flip reverses the order
+  geom_col(aes(fill=not_sure_string), width = 0.7) +
+  geom_text(aes(label = pct_neat), hjust = -0.05, size = 3.5, fontface = "bold") +
+  coord_flip() +
+  scale_fill_manual(values = "lightgrey") +
+  ggtitle("") +
+  # labs(caption = "Another response includes 'Not Sure,' and 'Neither Agree nor Disagree'") +
+  xlab("") +
+  ylab("") +
+  ylim(0, .5) + 
+  theme_bw() +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  theme(legend.position = "top",
+        legend.title = element_blank(),
+        legend.key.size = unit(0.3, "cm"),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank())
+
+
+likert_psychological_safety + not_sure_bars + plot_layout(widths = c(4, 1))
+
+
+
+```
+
+
+
+{{< pagebreak >}}
+## Trust and Confidence
+
+{{< pagebreak >}}
+### Overall Leadership Ratings
+
+The graph below takes the aggregate agreement levels across all items in the survey asking about each of the following groups. 
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 6
+#| fig-width: 8
+
+# Get Leadership Items into one df
+df_leadership_all_items <- employee_survey %>%
+  select(responseid, starts_with("leader_")) %>%
+  pivot_longer(cols = leader_const_01:leader_bot_12,
+               names_to = "var",
+               values_to = "response") %>%
+  mutate(leadership = case_when(grepl("_const_", var) ~ "Constituency Group",
+                           grepl("_dept_", var) ~ "Department/Area",
+                           grepl("_exec_", var) ~ "Executive Leadership Team",
+                           grepl("_bot_", var) ~ "Board of Trustees",
+                           TRUE ~ NA)) %>%
+  filter(response != 99999) %>% # EXCLUDE THOSE WHO DID NOT SEE ITEM (Added 9/18/25)
+  mutate(response = as_factor(response, levels = "labels")) %>%
+  filter(!is.na(response)) %>%
+  spread(leadership, response) %>%
+  select(`Constituency Group`, `Department/Area`, `Executive Leadership Team`, `Board of Trustees`, everything())
+
+
+# get dataframe with not sure responses 
+not_sure_const <- employee_survey %>%
+    select(responseid, starts_with("leader_const_")) %>%
+    pivot_longer(cols = leader_const_01:leader_const_12,
+               names_to = "var",
+               values_to = "response") %>%
+  filter(response != 99999) %>% # EXCLUDE THOSE WHO DID NOT SEE ITEM (Added 9/18/25)
+  mutate(response = as_factor(response, levels = "labels")) %>%
+  filter(!is.na(response)) %>%
+  mutate(not_sure = ifelse(response %in% c("Neither agree nor disagree", "Not Applicable", "Not Sure", "Neither Agree nor Disagree"),1,0)) %>%
+  count(not_sure) %>%
+  mutate(pct_not_sure = n/sum(n)) %>%
+  filter(not_sure == 1) %>%
+  mutate(pct_neat = paste0(round(pct_not_sure *100, 0), "%")) %>%
+  mutate(not_sure_string = "Another response") %>%
+  mutate(var = "Constituency Group")
+
+not_sure_dept <- employee_survey %>%
+    select(responseid, starts_with("leader_dept_")) %>%
+    pivot_longer(cols = leader_dept_01:leader_dept_11,
+               names_to = "var",
+               values_to = "response") %>%
+  filter(response != 99999) %>% # EXCLUDE THOSE WHO DID NOT SEE ITEM (Added 9/18/25)
+  mutate(response = as_factor(response, levels = "labels")) %>%
+  filter(!is.na(response)) %>%
+  mutate(not_sure = ifelse(response %in% c("Neither agree nor disagree", "Not Applicable", "Not Sure", "Neither Agree nor Disagree"),1,0)) %>%
+  count(not_sure) %>%
+  mutate(pct_not_sure = n/sum(n)) %>%
+  filter(not_sure == 1) %>%
+  mutate(pct_neat = paste0(round(pct_not_sure *100, 0), "%")) %>%
+  mutate(not_sure_string = "Another response") %>%
+  mutate(var = "Department/Area")
+
+not_sure_exec <- employee_survey %>%
+    select(responseid, starts_with("leader_exec_")) %>%
+    pivot_longer(cols = leader_exec_01:leader_exec_12,
+               names_to = "var",
+               values_to = "response") %>%
+  filter(response != 99999) %>% # EXCLUDE THOSE WHO DID NOT SEE ITEM (Added 9/18/25)
+  mutate(response = as_factor(response, levels = "labels")) %>%
+  filter(!is.na(response)) %>%
+  mutate(not_sure = ifelse(response %in% c("Neither agree nor disagree", "Not Applicable", "Not Sure", "Neither Agree nor Disagree"),1,0)) %>%
+  count(not_sure) %>%
+  mutate(pct_not_sure = n/sum(n)) %>%
+  filter(not_sure == 1) %>%
+  mutate(pct_neat = paste0(round(pct_not_sure *100, 0), "%")) %>%
+  mutate(not_sure_string = "Another response") %>%
+  mutate(var = "Executive Leadership Team")
+
+not_sure_bot <- employee_survey %>%
+    select(responseid, starts_with("leader_bot_")) %>%
+    pivot_longer(cols = leader_bot_01:leader_bot_12,
+               names_to = "var",
+               values_to = "response") %>%
+   filter(response != 99999) %>% # EXCLUDE THOSE WHO DID NOT SEE ITEM (Added 9/18/25)
+  mutate(response = as_factor(response, levels = "labels")) %>%
+  filter(!is.na(response)) %>%
+  mutate(not_sure = ifelse(response %in% c("Neither agree nor disagree", "Not Applicable", "Not Sure", "Neither Agree nor Disagree"),1,0)) %>%
+  count(not_sure) %>%
+  mutate(pct_not_sure = n/sum(n)) %>%
+  filter(not_sure == 1) %>%
+  mutate(pct_neat = paste0(round(pct_not_sure *100, 0), "%")) %>%
+  mutate(not_sure_string = "Another response") %>%
+  mutate(var = "Board of Trustees")
+
+not_sure_etc <- rbind(not_sure_const, not_sure_dept, not_sure_exec, not_sure_bot)
+
+# Create Another Response Graph
+not_sure_bars <- not_sure_etc %>% 
+  mutate(var = factor(var, levels = c("Constituency Group", "Department/Area", "Executive Leadership Team", "Board of Trustees"))) %>%
+  ggplot(aes(x = fct_rev(var), y = pct_not_sure)) + # need to reverse the factor because coord_flip reverses the order
+  geom_col(aes(fill=not_sure_string), width = 0.7) +
+  geom_text(aes(label = pct_neat), hjust = -0.05, size = 3.5, fontface = "bold") +
+  coord_flip() +
+  scale_fill_manual(values = "lightgrey") +
+  ggtitle("") +
+  # labs(caption = "Another response includes 'Not Applicable', 'Not Sure', and 'Neither Agree nor Disagree'") +
+  xlab("") +
+  ylab("") +
+  ylim(0, .8) + 
+  theme_bw() +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  theme(legend.position = "top",
+        legend.title = element_blank(),
+        legend.key.size = unit(0.3, "cm"),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank())
+
+# Get Likert Graph for Aggregated Leadership Items
+likert_const_group <- gglikert(df_leadership_all_items,
+         include = `Constituency Group`:`Board of Trustees`,
+         exclude_fill_values = c("Not Sure", "Not Applicable", "Neither agree nor disagree", "Neither Agree nor Disagree", "Did not receive question"),
+         reverse_likert = TRUE,
+         add_totals = TRUE,
+         add_labels = FALSE,
+         labels_hide_below = .01,
+         y_label_wrap = 40,
+         width = 0.7) + 
+         scale_fill_manual(values = scale_colors) +
+         ggtitle("") +
+  geom_vline(xintercept=0) +
+  guides(fill = guide_legend(reverse = TRUE)) +
+    scale_x_continuous(labels = function(x) paste0(abs(x)*100, "%"), limits = c(-1, 1)) +
+theme(legend.position = "top",
+        legend.title = element_blank(),
+        legend.key.size = unit(0.3, "cm"),
+        axis.text.y = element_text(size=12, colour = "black"),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank())
+
+
+likert_const_group + not_sure_bars + plot_layout(widths = c(4, 1))
+
+
+```
+
+{{< pagebreak >}}
+### Constituency Group
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 8
+#| fig-width: 8
+
+# get dataframe with not sure responses 
+not_sure_etc <- employee_survey %>%
+    select(responseid, starts_with("leader_const_")) %>%
+    pivot_longer(cols = leader_const_01:leader_const_12,
+               names_to = "var",
+               values_to = "response") %>%
+  filter(response != 99999) %>% # EXCLUDE THOSE WHO DID NOT SEE ITEM (Added 9/18/25)
+  mutate(response = as_factor(response, levels = "labels")) %>%
+  filter(!is.na(response)) %>%
+  mutate(not_sure = ifelse(response %in% c("Neither agree nor disagree", "Not Applicable", "Not Sure", "Neither Agree nor Disagree"),1,0)) %>%
+  count(var, not_sure) %>%
+  group_by(var) %>%
+  mutate(pct_not_sure = n/sum(n)) %>%
+  filter(not_sure == 1) %>%
+  mutate(pct_neat = paste0(round(pct_not_sure *100, 0), "%")) %>%
+  mutate(not_sure_string = "Another response")
+
+# Get likert graph for constituency group leadership items
+likert_leader_const <- gglikert(employee_survey, 
+         include = leader_const_01:leader_const_12, 
+         exclude_fill_values = c("Not Applicable", "Not Sure", "Neither agree nor disagree", "Neither Agree nor Disagree", "Did not receive question"),
+         variable_labels = c(
+            leader_const_01 = "operate transparently",
+            leader_const_02 = "center students in their decisions",
+            leader_const_03 = "center diversity, equity, inclusivity, and accessibility principles in their decisions",
+            leader_const_04 = "foster innovation and creativity",
+            leader_const_05 = "treat others with respect",
+            leader_const_06 = "provide effective communication on key issues, topics, and decisions",
+            leader_const_07 = "prioritize the well-being of employees",
+            leader_const_08 = "foster a culture of accountability and improvement",
+            leader_const_09 = "provide timely responses to concerns and questions",
+            leader_const_10 = "recognize the accomplishments of others",
+            leader_const_11 = "value employees’ input and perspectives",
+            leader_const_12 = "effectively represent my employee group"), 
+         reverse_likert = TRUE,
+         add_totals = TRUE,
+         add_labels = FALSE,
+         labels_hide_below = .01,
+         y_label_wrap = 40,
+         width = 0.7) + 
+  scale_fill_manual(values = scale_colors) +
+  ggtitle("My constituency leaders:") +
+  geom_vline(xintercept=0) +
+  guides(fill = guide_legend(reverse = TRUE)) +
+    scale_x_continuous(labels = function(x) paste0(abs(x)*100, "%"), limits = c(-1, 1)) +
+   theme(axis.text.y = element_text(size=12, colour = "black"),
+        plot.title = element_text(size=11, face = "bold"),
+        legend.position = "top",
+        legend.key.size = unit(0.3, "cm"),
+        axis.ticks = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank()) 
+
+# Create Another Response Graph
+not_sure_bars <- not_sure_etc %>% 
+  ggplot(aes(x = fct_rev(var), y = pct_not_sure)) + # need to reverse the factor because coord_flip reverses the order
+  geom_col(aes(fill=not_sure_string), width = 0.75) +
+  geom_text(aes(label = pct_neat), hjust = -0.05, size = 3.5, fontface = "bold") +
+  coord_flip() +
+  scale_fill_manual(values = "lightgrey") +
+  ggtitle("") +
+ # labs(caption = "Another response includes 'Not Applicable', 'Not Sure', and 'Neither Agree nor Disagree'") +
+  xlab("") +
+  ylab("") +
+  ylim(0, .6) + 
+  theme_bw() +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  theme(legend.position = "top",
+        legend.title = element_blank(),
+        legend.key.size = unit(0.3, "cm"),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank())
+
+
+likert_leader_const + not_sure_bars + plot_layout(widths = c(4, 1))
+```
+
+{{< pagebreak >}}
+### Department/Area
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 8
+#| fig-width: 8
+
+# get dataframe with not sure responses 
+not_sure_etc <- employee_survey %>%
+    select(responseid, starts_with("leader_dept_")) %>%
+    pivot_longer(cols = leader_dept_01:leader_dept_11,
+               names_to = "var",
+               values_to = "response") %>%
+  filter(response != 99999) %>% # EXCLUDE THOSE WHO DID NOT SEE ITEM (Added 9/18/25)
+  mutate(response = as_factor(response, levels = "labels")) %>%
+  filter(!is.na(response)) %>%
+  mutate(not_sure = ifelse(response %in% c("Neither agree nor disagree", "Not Applicable", "Not Sure", "Neither Agree nor Disagree"),1,0)) %>%
+  count(var, not_sure) %>%
+  group_by(var) %>%
+  mutate(pct_not_sure = n/sum(n)) %>%
+  filter(not_sure == 1) %>%
+  mutate(pct_neat = paste0(round(pct_not_sure *100, 0), "%")) %>%
+  mutate(not_sure_string = "Another response")
+
+# Get likert graph for dept leadership items
+likert_leader_dept <- gglikert(employee_survey, 
+         include = leader_dept_01:leader_dept_11, 
+         exclude_fill_values = c("Not Applicable", "Not Sure", "Neither agree nor disagree", "Neither Agree nor Disagree", "Did not receive question"),
+         variable_labels = c(
+            leader_dept_01 = "operate transparently",
+            leader_dept_02 = "center students in their decisions",
+            leader_dept_03 = "center diversity, equity, inclusivity, and accessibility principles in their decisions",
+            leader_dept_04 = "foster innovation and creativity",
+            leader_dept_05 = "treat others with respect",
+            leader_dept_06 = "provide effective communication on key issues, topics, and decisions",
+            leader_dept_07 = "prioritize the well-being of employees",
+            leader_dept_08 = "foster a culture of accountability and improvement",
+            leader_dept_09 = "provide timely responses to concerns and questions",
+            leader_dept_10 = "recognize the accomplishments of others",
+            leader_dept_11 = "value employees’ input and perspectives"), 
+         reverse_likert = TRUE,
+         add_totals = TRUE,
+         add_labels = FALSE,
+         labels_hide_below = .01,
+         y_label_wrap = 40,
+         width = 0.7) + 
+  scale_fill_manual(values = scale_colors) +
+  ggtitle("The leaders in my department/division:") +
+   geom_vline(xintercept=0) +
+  guides(fill = guide_legend(reverse = TRUE)) +
+    scale_x_continuous(labels = function(x) paste0(abs(x)*100, "%"), limits = c(-1, 1)) +
+  theme(axis.text.y = element_text(size=12, colour = "black"),
+        plot.title = element_text(size=11, face = "bold"),
+        legend.position = "top",
+        legend.key.size = unit(0.3, "cm"),
+        axis.ticks = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank()) 
+
+# Create Another Response Graph
+not_sure_bars <- not_sure_etc %>% 
+  ggplot(aes(x = fct_rev(var), y = pct_not_sure)) + # need to reverse the factor because coord_flip reverses the order
+  geom_col(aes(fill=not_sure_string), width = 0.75) +
+  geom_text(aes(label = pct_neat), hjust = -0.05, size = 3.5, fontface = "bold") +
+  coord_flip() +
+  scale_fill_manual(values = "lightgrey") +
+  ggtitle("") +
+ # labs(caption = "Another response includes 'Not Applicable', 'Not Sure', and 'Neither Agree nor Disagree'") +
+  xlab("") +
+  ylab("") +
+  ylim(0, .5) + 
+  theme_bw() +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  theme(legend.position = "top",
+        legend.title = element_blank(),
+        legend.key.size = unit(0.3, "cm"),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank())
+
+
+likert_leader_dept + not_sure_bars + plot_layout(widths = c(4, 1))
+```
+
+{{< pagebreak >}}
+### Executive Leadership
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 8
+#| fig-width: 8
+
+# get dataframe with not sure responses 
+not_sure_etc <- employee_survey %>%
+    select(responseid, starts_with("leader_exec_")) %>%
+    pivot_longer(cols = leader_exec_01:leader_exec_12,
+               names_to = "var",
+               values_to = "response") %>%
+  filter(response != 99999) %>% # EXCLUDE THOSE WHO DID NOT SEE ITEM (Added 9/18/25)
+  mutate(response = as_factor(response, levels = "labels")) %>%
+  filter(!is.na(response)) %>%
+  mutate(not_sure = ifelse(response %in% c("Neither agree nor disagree", "Not Applicable", "Not Sure", "Neither Agree nor Disagree"),1,0)) %>%
+  count(var, not_sure) %>%
+  group_by(var) %>%
+  mutate(pct_not_sure = n/sum(n)) %>%
+  filter(not_sure == 1) %>%
+  mutate(pct_neat = paste0(round(pct_not_sure *100, 0), "%")) %>%
+  mutate(not_sure_string = "Another response")
+
+# Get likert graph for exec leadership items
+
+likert_leader_exec <- gglikert(employee_survey, 
+         include = leader_exec_01:leader_exec_12, 
+         exclude_fill_values = c("Not Applicable", "Not Sure", "Neither agree nor disagree", "Neither Agree nor Disagree", "Did not receive question"),
+         variable_labels = c(
+            leader_exec_01 = "operate transparently",
+            leader_exec_02 = "center students in their decisions",
+            leader_exec_03 = "center diversity, equity, inclusivity, and accessibility principles in their decisions",
+            leader_exec_04 = "foster innovation and creativity",
+            leader_exec_05 = "treat others with respect",
+            leader_exec_06 = "provide effective communication on key issues, topics, and decisions",
+            leader_exec_07 = "prioritize the well-being of employees",
+            leader_exec_08 = "foster a culture of accountability and improvement",
+            leader_exec_09 = "provide timely responses to concerns and questions",
+            leader_exec_10 = "recognize the accomplishments of others",
+            leader_exec_11 = "value employees’ input and perspectives",
+            leader_exec_12 = "are well-prepared to lead the college/district into the future"), 
+         reverse_likert = TRUE,
+         add_totals = TRUE,
+         add_labels = FALSE,
+         labels_hide_below = .01,
+         y_label_wrap = 40,
+         width = 0.7) + 
+  scale_fill_manual(values = scale_colors) +
+  ggtitle("The executive leadership team members:") +
+  geom_vline(xintercept=0) +
+  guides(fill = guide_legend(reverse = TRUE)) +
+    scale_x_continuous(labels = function(x) paste0(abs(x)*100, "%"), limits = c(-1, 1)) +
+  theme(axis.text.y = element_text(size=12, colour = "black"),
+        plot.title = element_text(size=11, face = "bold"),
+        legend.position = "top",
+        legend.key.size = unit(0.3, "cm"),
+        axis.ticks = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank()) 
+
+# Create Another Response Graph
+not_sure_bars <- not_sure_etc %>% 
+  ggplot(aes(x = fct_rev(var), y = pct_not_sure)) + # need to reverse the factor because coord_flip reverses the order
+  geom_col(aes(fill=not_sure_string), width = 0.75) +
+  geom_text(aes(label = pct_neat), hjust = -0.05, size = 3.5, fontface = "bold") +
+  coord_flip() +
+  scale_fill_manual(values = "lightgrey") +
+  ggtitle("") +
+  # labs(caption = "Another response includes 'Not Applicable', 'Not Sure', and 'Neither Agree nor Disagree'") +
+  xlab("") +
+  ylab("") +
+  ylim(0, .7) + 
+  theme_bw() +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  theme(legend.position = "top",
+        legend.title = element_blank(),
+        legend.key.size = unit(0.3, "cm"),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank())
+
+
+likert_leader_exec + not_sure_bars + plot_layout(widths = c(4, 1))
+
+
+```
+
+{{< pagebreak >}}
+### Board of Trustees
+
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+#| fig-height: 8
+#| fig-width: 8
+
+# Create New Dataset with "Did not receive question" as NA to drop from GGLIKERT denominator
+employee_survey_likert <- employee_survey %>%
+  mutate(across(
+    leader_bot_01:leader_bot_12,
+    ~ if_else(. == 99999, NA, .)))
+
+# get dataframe with not sure responses 
+not_sure_etc <- employee_survey %>%
+    select(responseid, starts_with("leader_bot_")) %>%
+    pivot_longer(cols = leader_bot_01:leader_bot_12,
+               names_to = "var",
+               values_to = "response") %>%
+  filter(response != 99999) %>% # EXCLUDE THOSE WHO DID NOT SEE ITEM (Added 9/18/25)
+  mutate(response = as_factor(response, levels = "labels")) %>%
+  filter(!is.na(response)) %>%
+  mutate(not_sure = ifelse(response %in% c("Neither agree nor disagree", "Not Applicable", "Not Sure", "Neither Agree nor Disagree"),1,0)) %>%
+  count(var, not_sure) %>%
+  group_by(var) %>%
+  mutate(pct_not_sure = n/sum(n)) %>%
+  filter(not_sure == 1) %>%
+  mutate(pct_neat = paste0(round(pct_not_sure *100, 0), "%")) %>%
+  mutate(not_sure_string = "Another response")
+
+# Get likert graph for exec leadership items
+likert_leader_bot <- gglikert(employee_survey_likert, 
+         include = leader_bot_01:leader_bot_12, 
+         exclude_fill_values = c("Not Applicable", "Not Sure", "Neither agree nor disagree", "Neither Agree nor Disagree", "Did not receive question"), # Note: Exclude fill values are still included in denominator 
+         variable_labels = c(
+            leader_bot_01 = "operate transparently",
+            leader_bot_02 = "center students in their decisions",
+            leader_bot_03 = "center diversity, equity, inclusivity, and accessibility principles in their decisions",
+            leader_bot_04 = "foster innovation and creativity",
+            leader_bot_05 = "treat others with respect",
+            leader_bot_06 = "provide effective communication on key issues, topics, and decisions",
+            leader_bot_07 = "prioritize the well-being of employees",
+            leader_bot_08 = "foster a culture of accountability and improvement",
+            leader_bot_09 = "provide timely responses to concerns and questions",
+            leader_bot_10 = "recognize the accomplishments of others",
+            leader_bot_11 = "value employees’ input and perspectives",
+            leader_bot_12 = "are well-prepared to lead the college/district into the future"), 
+         reverse_likert = TRUE,
+         add_totals = TRUE,
+         add_labels = FALSE,
+         labels_hide_below = .01,
+         y_label_wrap = 40,
+         width = 0.7) + 
+  scale_fill_manual(values = scale_colors) +
+  ggtitle("The Board of Trustees:") +
+   geom_vline(xintercept=0) +
+  guides(fill = guide_legend(reverse = TRUE)) +
+    scale_x_continuous(labels = function(x) paste0(abs(x)*100, "%"), limits = c(-1, 1)) +
+  theme(axis.text.y = element_text(size=12, colour = "black"),
+        plot.title = element_text(size=11, face = "bold"),
+        legend.position = "top",
+        legend.key.size = unit(0.3, "cm"),
+        axis.ticks = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank()) 
+
+# Create Another Response Graph
+not_sure_bars <- not_sure_etc %>% 
+  ggplot(aes(x = fct_rev(var), y = pct_not_sure)) + # need to reverse the factor because coord_flip reverses the order
+  geom_col(aes(fill=not_sure_string), width = 0.75) +
+  geom_text(aes(label = pct_neat), hjust = -0.05, size = 3.5, fontface = "bold") +
+  coord_flip() +
+  scale_fill_manual(values = "lightgrey") +
+  ggtitle("") +
+  # labs(caption = "Another response includes 'Not Applicable', 'Not Sure', and 'Neither Agree nor Disagree'") +
+  xlab("") +
+  ylab("") +
+  ylim(0, 1) + 
+  theme_bw() +
+  guides(fill = guide_legend(reverse = TRUE)) +
+  theme(legend.position = "top",
+        legend.title = element_blank(),
+        legend.key.size = unit(0.3, "cm"),
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.border = element_blank(),
+        panel.background = element_blank())
+
+
+likert_leader_bot + not_sure_bars + plot_layout(widths = c(4, 1))
+```
+
+
+
+

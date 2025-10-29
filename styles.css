@@ -1,0 +1,11 @@
+.quarto-title-block .quarto-title-banner {
+  background-image: url(RP_Logo_White.png);
+  background-color: #035157; /* RP Teal*/
+  color: white;
+  background-size: 220px;
+  background-position: left;
+  background-repeat: no-repeat;
+  padding-left: 10px;
+  background-origin: content-box;
+}
+
