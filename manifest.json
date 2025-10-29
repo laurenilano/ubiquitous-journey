@@ -241,6 +241,40 @@
         "Archs": "V8.so.dSYM"
       }
     },
+    "arrow": {
+      "Source": "CRAN",
+      "Repository": "https://cran.rstudio.com",
+      "description": {
+        "Package": "arrow",
+        "Title": "Integration to 'Apache' 'Arrow'",
+        "Version": "18.1.0.1",
+        "Authors@R": "c(\n    person(\"Neal\", \"Richardson\", email = \"neal.p.richardson@gmail.com\", role = c(\"aut\")),\n    person(\"Ian\", \"Cook\", email = \"ianmcook@gmail.com\", role = c(\"aut\")),\n    person(\"Nic\", \"Crane\", email = \"thisisnic@gmail.com\", role = c(\"aut\")),\n    person(\"Dewey\", \"Dunnington\", role = c(\"aut\"), email = \"dewey@fishandwhistle.net\", comment = c(ORCID = \"0000-0002-9415-4582\")),\n    person(\"Romain\", \"Fran\\u00e7ois\", role = c(\"aut\"), comment = c(ORCID = \"0000-0002-2444-4226\")),\n    person(\"Jonathan\", \"Keane\", email = \"jkeane@gmail.com\", role = c(\"aut\", \"cre\")),\n    person(\"Drago\\u0219\", \"Moldovan-Gr\\u00fcnfeld\", email = \"dragos.mold@gmail.com\", role = c(\"aut\")),\n    person(\"Jeroen\", \"Ooms\", email = \"jeroen@berkeley.edu\", role = c(\"aut\")),\n    person(\"Jacob\", \"Wujciak-Jens\", email = \"jacob@wujciak.de\", role = c(\"aut\")),\n    person(\"Javier\", \"Luraschi\", email = \"javier@rstudio.com\", role = c(\"ctb\")),\n    person(\"Karl\", \"Dunkle Werner\", email = \"karldw@users.noreply.github.com\", role = c(\"ctb\"), comment = c(ORCID = \"0000-0003-0523-7309\")),\n    person(\"Jeffrey\", \"Wong\", email = \"jeffreyw@netflix.com\", role = c(\"ctb\")),\n    person(\"Apache Arrow\", email = \"dev@arrow.apache.org\", role = c(\"aut\", \"cph\"))\n  )",
+        "Description": "'Apache' 'Arrow' <https://arrow.apache.org/> is a cross-language\n    development platform for in-memory data. It specifies a standardized\n    language-independent columnar memory format for flat and hierarchical data,\n    organized for efficient analytic operations on modern hardware. This\n    package provides an interface to the 'Arrow C++' library.",
+        "Depends": "R (>= 4.0)",
+        "License": "Apache License (>= 2.0)",
+        "URL": "https://github.com/apache/arrow/, https://arrow.apache.org/docs/r/",
+        "BugReports": "https://github.com/apache/arrow/issues",
+        "Encoding": "UTF-8",
+        "Language": "en-US",
+        "SystemRequirements": "C++17; for AWS S3 support on Linux, libcurl and\nopenssl (optional); cmake >= 3.16 (build-time only, and only\nfor full source build)",
+        "Biarch": "true",
+        "Imports": "assertthat, bit64 (>= 0.9-7), glue, methods, purrr, R6, rlang\n(>= 1.0.0), stats, tidyselect (>= 1.0.0), utils, vctrs",
+        "RoxygenNote": "7.3.1",
+        "Config/testthat/edition": "3",
+        "Config/build/bootstrap": "TRUE",
+        "Suggests": "blob, curl, cli, DBI, dbplyr, decor, distro, dplyr, duckdb\n(>= 0.2.8), hms, jsonlite, knitr, lubridate, pillar, pkgload,\nreticulate, rmarkdown, stringi, stringr, sys, testthat (>=\n3.1.0), tibble, tzdb, withr",
+        "LinkingTo": "cpp11 (>= 0.4.2)",
+        "Collate": "'arrowExports.R' 'enums.R' 'arrow-object.R' 'type.R'\n'array-data.R' 'arrow-datum.R' 'array.R' 'arrow-info.R'\n'arrow-package.R' 'arrow-tabular.R' 'buffer.R'\n'chunked-array.R' 'io.R' 'compression.R' 'scalar.R' 'compute.R'\n'config.R' 'csv.R' 'dataset.R' 'dataset-factory.R'\n'dataset-format.R' 'dataset-partition.R' 'dataset-scan.R'\n'dataset-write.R' 'dictionary.R' 'dplyr-across.R'\n'dplyr-arrange.R' 'dplyr-by.R' 'dplyr-collect.R'\n'dplyr-count.R' 'dplyr-datetime-helpers.R' 'dplyr-distinct.R'\n'dplyr-eval.R' 'dplyr-filter.R' 'dplyr-funcs-agg.R'\n'dplyr-funcs-augmented.R' 'dplyr-funcs-conditional.R'\n'dplyr-funcs-datetime.R' 'dplyr-funcs-doc.R'\n'dplyr-funcs-math.R' 'dplyr-funcs-simple.R'\n'dplyr-funcs-string.R' 'dplyr-funcs-type.R' 'expression.R'\n'dplyr-funcs.R' 'dplyr-glimpse.R' 'dplyr-group-by.R'\n'dplyr-join.R' 'dplyr-mutate.R' 'dplyr-select.R'\n'dplyr-slice.R' 'dplyr-summarize.R' 'dplyr-union.R'\n'record-batch.R' 'table.R' 'dplyr.R' 'duckdb.R' 'extension.R'\n'feather.R' 'field.R' 'filesystem.R' 'flight.R'\n'install-arrow.R' 'ipc-stream.R' 'json.R' 'memory-pool.R'\n'message.R' 'metadata.R' 'parquet.R' 'python.R'\n'query-engine.R' 'record-batch-reader.R'\n'record-batch-writer.R' 'reexports-bit64.R'\n'reexports-tidyselect.R' 'schema.R' 'udf.R' 'util.R'",
+        "NeedsCompilation": "yes",
+        "Packaged": "2025-01-05 15:42:56 UTC; jkeane",
+        "Author": "Neal Richardson [aut],\n  Ian Cook [aut],\n  Nic Crane [aut],\n  Dewey Dunnington [aut] (<https://orcid.org/0000-0002-9415-4582>),\n  Romain François [aut] (<https://orcid.org/0000-0002-2444-4226>),\n  Jonathan Keane [aut, cre],\n  Dragoș Moldovan-Grünfeld [aut],\n  Jeroen Ooms [aut],\n  Jacob Wujciak-Jens [aut],\n  Javier Luraschi [ctb],\n  Karl Dunkle Werner [ctb] (<https://orcid.org/0000-0003-0523-7309>),\n  Jeffrey Wong [ctb],\n  Apache Arrow [aut, cph]",
+        "Maintainer": "Jonathan Keane <jkeane@gmail.com>",
+        "Repository": "CRAN",
+        "Date/Publication": "2025-01-08 06:40:02 UTC",
+        "Built": "R 4.4.1; aarch64-apple-darwin20; 2025-01-08 08:01:01 UTC; unix",
+        "Archs": "arrow.so.dSYM"
+      }
+    },
     "askpass": {
       "Source": "CRAN",
       "Repository": "https://cran.rstudio.com",
@@ -267,6 +301,29 @@
         "Date/Publication": "2024-10-04 07:20:03 UTC",
         "Built": "R 4.4.1; aarch64-apple-darwin20; 2024-10-04 08:14:07 UTC; unix",
         "Archs": "askpass.so.dSYM"
+      }
+    },
+    "assertthat": {
+      "Source": "CRAN",
+      "Repository": "https://cran.rstudio.com",
+      "description": {
+        "Package": "assertthat",
+        "Title": "Easy Pre and Post Assertions",
+        "Version": "0.2.1",
+        "Authors@R": "\n  person(\"Hadley\", \"Wickham\", , \"hadley@rstudio.com\", c(\"aut\", \"cre\"))",
+        "Description": "An extension to stopifnot() that makes it easy to declare \n    the pre and post conditions that you code should satisfy, while also \n    producing friendly error messages so that your users know what's gone\n    wrong.",
+        "License": "GPL-3",
+        "Imports": "tools",
+        "Suggests": "testthat, covr",
+        "RoxygenNote": "6.0.1",
+        "Collate": "'assert-that.r' 'on-failure.r' 'assertions-file.r'\n'assertions-scalar.R' 'assertions.r' 'base.r'\n'base-comparison.r' 'base-is.r' 'base-logical.r' 'base-misc.r'\n'utils.r' 'validate-that.R'",
+        "NeedsCompilation": "no",
+        "Packaged": "2019-03-21 13:11:01 UTC; hadley",
+        "Author": "Hadley Wickham [aut, cre]",
+        "Maintainer": "Hadley Wickham <hadley@rstudio.com>",
+        "Repository": "CRAN",
+        "Date/Publication": "2019-03-21 14:53:46 UTC",
+        "Built": "R 4.4.1; ; 2025-02-01 04:50:43 UTC; unix"
       }
     },
     "backports": {
@@ -1230,6 +1287,67 @@
         "Archs": "fs.so.dSYM"
       }
     },
+    "fst": {
+      "Source": "CRAN",
+      "Repository": "https://cran.rstudio.com",
+      "description": {
+        "Package": "fst",
+        "Type": "Package",
+        "Title": "Lightning Fast Serialization of Data Frames",
+        "Description": "Multithreaded serialization of compressed data frames using the 'fst' format. The\n    'fst' format allows for full random access of stored data and a wide range of compression\n    settings using the LZ4 and ZSTD compressors.",
+        "Version": "0.9.8",
+        "Date": "2022-02-07",
+        "Authors@R": "\n    person(\"Mark\", \"Klik\", email = \"markklik@gmail.com\", role = c(\"aut\", \"cre\", \"cph\"))",
+        "Depends": "R (>= 3.0.0)",
+        "Imports": "fstcore, Rcpp",
+        "LinkingTo": "Rcpp, fstcore",
+        "SystemRequirements": "little-endian platform",
+        "RoxygenNote": "7.1.2",
+        "Suggests": "testthat, bit64, data.table, lintr, nanotime, crayon",
+        "License": "AGPL-3 | file LICENSE",
+        "Encoding": "UTF-8",
+        "URL": "http://www.fstpackage.org",
+        "BugReports": "https://github.com/fstpackage/fst/issues",
+        "NeedsCompilation": "yes",
+        "Packaged": "2022-02-07 16:20:02 UTC; Mark",
+        "Author": "Mark Klik [aut, cre, cph]",
+        "Maintainer": "Mark Klik <markklik@gmail.com>",
+        "Repository": "CRAN",
+        "Date/Publication": "2022-02-08 07:40:02 UTC",
+        "Built": "R 4.4.2; aarch64-apple-darwin20; 2025-02-19 00:35:28 UTC; unix"
+      }
+    },
+    "fstcore": {
+      "Source": "CRAN",
+      "Repository": "https://cran.rstudio.com",
+      "description": {
+        "Package": "fstcore",
+        "Type": "Package",
+        "Title": "R Bindings to the 'Fstlib' Library",
+        "Description": "The 'fstlib' library provides multithreaded serialization of compressed data frames using the\n    'fst' format. The 'fst' format allows for random access of stored data and compression with the 'LZ4' and 'ZSTD'\n    compressors.",
+        "Version": "0.10.0",
+        "Date": "2025-02-10",
+        "Authors@R": "\n    c(person(given = \"Mark\",\n             family = \"Klik\",\n             role = c(\"aut\", \"cre\", \"cph\"),\n             email = \"markklik@gmail.com\",\n             comment = \"Mark Klik is author of the fstcore package and author and copyright holder of the bundled 'fstlib' code\"),\n      person(given = \"Yuta\",\n             family = \"Mori\",\n             role = c(\"ctb\", \"cph\"),\n             comment = \"Yuta Mori is author and copyright holder of the bundled 'libdivsufsort-lite' code, part of 'ZSTD'\"),\n      person(given = \"Przemyslaw\",\n             family = \"Skibinski\",\n             role = c(\"ctb\", \"cph\"),\n             comment = \"Przemyslaw Skibinski is author and copyright holder of the bundled price functions, part of 'ZSTD'\"),\n      person(given = \"Tino\",\n             family = \"Reichardt\",\n             role = c(\"ctb\", \"cph\"),\n             comment = \"Tino Reichardt is author and copyright holder of bundled sources from the 'zstdmt' library, part of 'ZSTD'\"),\n      person(given = \"Yann\",\n             family = \"Collet\",\n             role = c(\"ctb\", \"cph\"),\n             comment = \"Yann Collet is author of the bundled 'LZ4' and 'ZSTD' code and copyright holder of 'LZ4'\"),\n      person(given = \"Facebook, Inc.\",\n            role = \"cph\",\n            comment = \"Bundled 'ZSTD' code\"))",
+        "Depends": "R (>= 3.0.0)",
+        "Imports": "Rcpp",
+        "LinkingTo": "Rcpp",
+        "SystemRequirements": "little-endian platform",
+        "RoxygenNote": "7.3.2",
+        "Suggests": "testthat, lintr",
+        "License": "MPL-2.0 | file LICENSE",
+        "Encoding": "UTF-8",
+        "Copyright": "This package includes sources from the LZ4 library owned by\nYann Collet, sources of the ZSTD library owned by Facebook,\nInc., sources of the libdivsufsort-lite library owned by Yuta\nMori and sources of the fstlib library owned by Mark Klik",
+        "URL": "https://www.fstpackage.org/fstcore/",
+        "BugReports": "https://github.com/fstpackage/fst/issues",
+        "NeedsCompilation": "yes",
+        "Packaged": "2025-02-10 20:13:08 UTC; Code",
+        "Author": "Mark Klik [aut, cre, cph] (Mark Klik is author of the fstcore package\n    and author and copyright holder of the bundled 'fstlib' code),\n  Yuta Mori [ctb, cph] (Yuta Mori is author and copyright holder of the\n    bundled 'libdivsufsort-lite' code, part of 'ZSTD'),\n  Przemyslaw Skibinski [ctb, cph] (Przemyslaw Skibinski is author and\n    copyright holder of the bundled price functions, part of 'ZSTD'),\n  Tino Reichardt [ctb, cph] (Tino Reichardt is author and copyright\n    holder of bundled sources from the 'zstdmt' library, part of\n    'ZSTD'),\n  Yann Collet [ctb, cph] (Yann Collet is author of the bundled 'LZ4' and\n    'ZSTD' code and copyright holder of 'LZ4'),\n  Facebook, Inc. [cph] (Bundled 'ZSTD' code)",
+        "Maintainer": "Mark Klik <markklik@gmail.com>",
+        "Repository": "CRAN",
+        "Date/Publication": "2025-02-10 20:50:02 UTC",
+        "Built": "R 4.4.2; aarch64-apple-darwin20; 2025-02-19 00:35:59 UTC; unix"
+      }
+    },
     "gargle": {
       "Source": "CRAN",
       "Repository": "https://cran.rstudio.com",
@@ -1318,6 +1436,36 @@
         "Repository": "CRAN",
         "Date/Publication": "2025-04-09 09:40:10 UTC",
         "Built": "R 4.4.1; ; 2025-04-09 11:08:10 UTC; unix"
+      }
+    },
+    "ggstats": {
+      "Source": "CRAN",
+      "Repository": "https://cran.rstudio.com",
+      "description": {
+        "Package": "ggstats",
+        "Type": "Package",
+        "Title": "Extension to 'ggplot2' for Plotting Stats",
+        "Version": "0.9.0",
+        "Authors@R": "c(\n    person(\n      \"Joseph\", \"Larmarange\", ,\n      \"joseph@larmarange.net\",\n      role = c(\"aut\", \"cre\"),\n      comment = c(ORCID = \"0000-0001-7097-700X\")\n    )\n  )",
+        "Description": "Provides new statistics, new geometries and new positions for \n    'ggplot2' and a suite of functions to facilitate the creation of \n    statistical plots.",
+        "License": "GPL (>= 3)",
+        "URL": "https://larmarange.github.io/ggstats/,\nhttps://github.com/larmarange/ggstats",
+        "BugReports": "https://github.com/larmarange/ggstats/issues",
+        "Depends": "R (>= 4.2)",
+        "Imports": "cli, dplyr, forcats, ggplot2 (>= 3.4.0), lifecycle, patchwork,\npurrr, rlang, scales, stats, stringr, utils, tidyr",
+        "Suggests": "betareg, broom, broom.helpers (>= 1.20.0), emmeans, glue,\ngtsummary, knitr, labelled (>= 2.11.0), reshape, rmarkdown,\nnnet, parameters, pscl, testthat (>= 3.0.0), spelling, survey,\nsurvival, vdiffr",
+        "Encoding": "UTF-8",
+        "RoxygenNote": "7.3.2",
+        "Config/testthat/edition": "3",
+        "Language": "en-US",
+        "VignetteBuilder": "knitr",
+        "NeedsCompilation": "no",
+        "Packaged": "2025-03-10 10:35:16 UTC; josep",
+        "Author": "Joseph Larmarange [aut, cre] (<https://orcid.org/0000-0001-7097-700X>)",
+        "Maintainer": "Joseph Larmarange <joseph@larmarange.net>",
+        "Repository": "CRAN",
+        "Date/Publication": "2025-03-10 11:20:02 UTC",
+        "Built": "R 4.4.1; ; 2025-03-10 12:00:50 UTC; unix"
       }
     },
     "glue": {
@@ -1815,6 +1963,36 @@
         "Built": "R 4.4.0; ; 2024-04-06 02:51:37 UTC; unix"
       }
     },
+    "kableExtra": {
+      "Source": "CRAN",
+      "Repository": "https://cran.rstudio.com",
+      "description": {
+        "Package": "kableExtra",
+        "Type": "Package",
+        "Title": "Construct Complex Table with 'kable' and Pipe Syntax",
+        "Version": "1.4.0",
+        "Authors@R": "c(\n    person('Hao', 'Zhu', email = 'haozhu233@gmail.com', role = c('aut', 'cre'),\n    comment = c(ORCID = '0000-0002-3386-6076')),\n    person('Thomas', 'Travison', role = 'ctb'),\n    person('Timothy', 'Tsai', role = 'ctb'),\n    person('Will', 'Beasley', email = 'wibeasley@hotmail.com', role = 'ctb'),\n    person('Yihui', 'Xie', email = 'xie@yihui.name', role = 'ctb'),\n    person('GuangChuang', 'Yu', email = 'guangchuangyu@gmail.com', role = 'ctb'),\n    person('Stéphane', 'Laurent', role = 'ctb'),\n    person('Rob', 'Shepherd', role = 'ctb'),\n    person('Yoni', 'Sidi', role = 'ctb'), \n    person('Brian', 'Salzer', role = 'ctb'),\n    person('George', 'Gui', role = 'ctb'),\n    person('Yeliang', 'Fan', role = 'ctb'),\n    person('Duncan', 'Murdoch', role = 'ctb'),\n    person('Vincent', 'Arel-Bundock', role = 'ctb'),\n    person('Bill', 'Evans',  role = 'ctb')\n    )",
+        "Description": "Build complex HTML or 'LaTeX' tables using 'kable()' from 'knitr' \n    and the piping syntax from 'magrittr'. Function 'kable()' is a light weight \n    table generator coming from 'knitr'. This package simplifies the way to \n    manipulate the HTML or 'LaTeX' codes generated by 'kable()' and allows \n    users to construct complex tables and customize styles using a readable \n    syntax. ",
+        "License": "MIT + file LICENSE",
+        "URL": "http://haozhu233.github.io/kableExtra/,\nhttps://github.com/haozhu233/kableExtra",
+        "BugReports": "https://github.com/haozhu233/kableExtra/issues",
+        "Depends": "R (>= 3.1.0)",
+        "Imports": "knitr (>= 1.33), magrittr, stringr (>= 1.0), xml2 (>= 1.1.1),\nrmarkdown (>= 1.6.0), scales, viridisLite, stats, grDevices,\nhtmltools, rstudioapi, tools, digest, graphics, svglite",
+        "Suggests": "testthat, magick, tinytex, formattable, sparkline, webshot2",
+        "Config/testthat/edition": "3",
+        "VignetteBuilder": "knitr",
+        "Encoding": "UTF-8",
+        "RoxygenNote": "7.2.3",
+        "Language": "en-US",
+        "NeedsCompilation": "no",
+        "Packaged": "2024-01-23 15:43:39 UTC; haozhu",
+        "Author": "Hao Zhu [aut, cre] (<https://orcid.org/0000-0002-3386-6076>),\n  Thomas Travison [ctb],\n  Timothy Tsai [ctb],\n  Will Beasley [ctb],\n  Yihui Xie [ctb],\n  GuangChuang Yu [ctb],\n  Stéphane Laurent [ctb],\n  Rob Shepherd [ctb],\n  Yoni Sidi [ctb],\n  Brian Salzer [ctb],\n  George Gui [ctb],\n  Yeliang Fan [ctb],\n  Duncan Murdoch [ctb],\n  Vincent Arel-Bundock [ctb],\n  Bill Evans [ctb]",
+        "Maintainer": "Hao Zhu <haozhu233@gmail.com>",
+        "Repository": "CRAN",
+        "Date/Publication": "2024-01-24 14:20:02 UTC",
+        "Built": "R 4.4.0; ; 2024-04-06 10:52:30 UTC; unix"
+      }
+    },
     "knitr": {
       "Source": "CRAN",
       "Repository": "https://cran.rstudio.com",
@@ -1865,6 +2043,39 @@
         "Repository": "CRAN",
         "Date/Publication": "2023-08-29 22:20:02 UTC",
         "Built": "R 4.4.1; ; 2025-02-01 04:47:41 UTC; unix"
+      }
+    },
+    "labelled": {
+      "Source": "CRAN",
+      "Repository": "https://cran.rstudio.com",
+      "description": {
+        "Package": "labelled",
+        "Type": "Package",
+        "Title": "Manipulating Labelled Data",
+        "Version": "2.14.0",
+        "Maintainer": "Joseph Larmarange <joseph@larmarange.net>",
+        "Authors@R": "c(\n  person(\"Joseph\", \"Larmarange\", email = \"joseph@larmarange.net\", role = c(\"aut\", \"cre\"), comment = c(ORCID = \"0000-0001-7097-700X\")),\n  person(\"Daniel\", \"Ludecke\", role = \"ctb\"),\n  person(\"Hadley\", \"Wickham\", role = \"ctb\"),\n  person(\"Michal\", \"Bojanowski\", role = \"ctb\"),\n  person(\"François\", \"Briatte\", role = \"ctb\")\n  )",
+        "Description": "Work with labelled data imported from 'SPSS'\n    or 'Stata' with 'haven' or 'foreign'. This package\n    provides useful functions to deal with \"haven_labelled\" and\n    \"haven_labelled_spss\" classes introduced by 'haven' package.",
+        "License": "GPL (>= 3)",
+        "Encoding": "UTF-8",
+        "Depends": "R (>= 3.2)",
+        "Imports": "haven (>= 2.4.1), cli, dplyr (>= 1.1.0), lifecycle, rlang (>=\n1.1.0), vctrs, stringr, tidyr, tidyselect",
+        "Suggests": "testthat (>= 3.2.0), knitr, rmarkdown, questionr, snakecase,\nspelling",
+        "Enhances": "memisc",
+        "URL": "https://larmarange.github.io/labelled/,\nhttps://github.com/larmarange/labelled",
+        "BugReports": "https://github.com/larmarange/labelled/issues",
+        "VignetteBuilder": "knitr",
+        "LazyData": "true",
+        "RoxygenNote": "7.3.2",
+        "Language": "en-US",
+        "Config/testthat/edition": "3",
+        "Config/Needs/check": "memisc",
+        "NeedsCompilation": "no",
+        "Packaged": "2025-01-08 08:12:06 UTC; josep",
+        "Author": "Joseph Larmarange [aut, cre] (<https://orcid.org/0000-0001-7097-700X>),\n  Daniel Ludecke [ctb],\n  Hadley Wickham [ctb],\n  Michal Bojanowski [ctb],\n  François Briatte [ctb]",
+        "Repository": "CRAN",
+        "Date/Publication": "2025-01-08 08:50:02 UTC",
+        "Built": "R 4.4.1; ; 2025-01-08 09:36:57 UTC; unix"
       }
     },
     "lattice": {
@@ -2264,6 +2475,34 @@
         "Date/Publication": "2025-02-03 14:20:02 UTC",
         "Built": "R 4.4.1; aarch64-apple-darwin20; 2025-02-03 14:46:49 UTC; unix",
         "Archs": "openssl.so.dSYM"
+      }
+    },
+    "patchwork": {
+      "Source": "CRAN",
+      "Repository": "https://cran.rstudio.com",
+      "description": {
+        "Package": "patchwork",
+        "Type": "Package",
+        "Title": "The Composer of Plots",
+        "Version": "1.3.0",
+        "Authors@R": "\n    person(given = \"Thomas Lin\",\n           family = \"Pedersen\",\n           role = c(\"cre\", \"aut\"),\n           email = \"thomasp85@gmail.com\",\n           comment = c(ORCID = \"0000-0002-5147-4711\"))",
+        "Maintainer": "Thomas Lin Pedersen <thomasp85@gmail.com>",
+        "Description": "The 'ggplot2' package provides a strong API for sequentially \n    building up a plot, but does not concern itself with composition of multiple\n    plots. 'patchwork' is a package that expands the API to allow for \n    arbitrarily complex composition of plots by, among others, providing \n    mathematical operators for combining multiple plots. Other packages that try \n    to address this need (but with a different approach) are 'gridExtra' and \n    'cowplot'.",
+        "License": "MIT + file LICENSE",
+        "Encoding": "UTF-8",
+        "Imports": "ggplot2 (>= 3.0.0), gtable, grid, stats, grDevices, utils,\ngraphics, rlang (>= 1.0.0), cli, farver",
+        "RoxygenNote": "7.3.2",
+        "URL": "https://patchwork.data-imaginist.com,\nhttps://github.com/thomasp85/patchwork",
+        "BugReports": "https://github.com/thomasp85/patchwork/issues",
+        "Suggests": "knitr, rmarkdown, gridGraphics, gridExtra, ragg, testthat (>=\n2.1.0), vdiffr, covr, png, gt (>= 0.11.0)",
+        "VignetteBuilder": "knitr",
+        "Config/Needs/website": "gifski",
+        "NeedsCompilation": "no",
+        "Packaged": "2024-09-16 08:14:08 UTC; thomas",
+        "Author": "Thomas Lin Pedersen [cre, aut]\n    (<https://orcid.org/0000-0002-5147-4711>)",
+        "Repository": "CRAN",
+        "Date/Publication": "2024-09-16 09:30:02 UTC",
+        "Built": "R 4.4.1; ; 2024-09-16 09:52:46 UTC; unix"
       }
     },
     "pillar": {
@@ -3162,6 +3401,38 @@
         "Built": "R 4.4.0; ; 2024-04-06 06:42:00 UTC; unix"
       }
     },
+    "svglite": {
+      "Source": "CRAN",
+      "Repository": "https://cran.rstudio.com",
+      "description": {
+        "Package": "svglite",
+        "Title": "An 'SVG' Graphics Device",
+        "Version": "2.1.3",
+        "Authors@R": "c(\n    person(\"Hadley\", \"Wickham\", , \"hadley@posit.co\", role = \"aut\"),\n    person(\"Lionel\", \"Henry\", , \"lionel@posit.co\", role = \"aut\"),\n    person(\"Thomas Lin\", \"Pedersen\", , \"thomas.pedersen@posit.co\", role = c(\"cre\", \"aut\"),\n           comment = c(ORCID = \"0000-0002-5147-4711\")),\n    person(\"T Jake\", \"Luciani\", , \"jake@apache.org\", role = \"aut\"),\n    person(\"Matthieu\", \"Decorde\", , \"matthieu.decorde@ens-lyon.fr\", role = \"aut\"),\n    person(\"Vaudor\", \"Lise\", , \"lise.vaudor@ens-lyon.fr\", role = \"aut\"),\n    person(\"Tony\", \"Plate\", role = \"ctb\",\n           comment = \"Early line dashing code\"),\n    person(\"David\", \"Gohel\", role = \"ctb\",\n           comment = \"Line dashing code and early raster code\"),\n    person(\"Yixuan\", \"Qiu\", role = \"ctb\",\n           comment = \"Improved styles; polypath implementation\"),\n    person(\"Håkon\", \"Malmedal\", role = \"ctb\",\n           comment = \"Opacity code\"),\n    person(\"Posit, PBC\", role = c(\"cph\", \"fnd\"))\n  )",
+        "Description": "A graphics device for R that produces 'Scalable Vector\n    Graphics'. 'svglite' is a fork of the older 'RSvgDevice' package.",
+        "License": "GPL (>= 2)",
+        "URL": "https://svglite.r-lib.org, https://github.com/r-lib/svglite",
+        "BugReports": "https://github.com/r-lib/svglite/issues",
+        "Depends": "R (>= 3.5.0)",
+        "Imports": "systemfonts (>= 1.0.0)",
+        "Suggests": "covr, fontquiver (>= 0.2.0), htmltools, knitr, rmarkdown,\ntestthat (>= 3.0.0), xml2 (>= 1.0.0)",
+        "LinkingTo": "cpp11, systemfonts",
+        "VignetteBuilder": "knitr",
+        "Config/Needs/website": "tidyverse/tidytemplate",
+        "Encoding": "UTF-8",
+        "RoxygenNote": "7.2.3",
+        "SystemRequirements": "libpng",
+        "Config/testthat/edition": "3",
+        "NeedsCompilation": "yes",
+        "Packaged": "2023-12-08 14:53:20 UTC; thomas",
+        "Author": "Hadley Wickham [aut],\n  Lionel Henry [aut],\n  Thomas Lin Pedersen [cre, aut]\n    (<https://orcid.org/0000-0002-5147-4711>),\n  T Jake Luciani [aut],\n  Matthieu Decorde [aut],\n  Vaudor Lise [aut],\n  Tony Plate [ctb] (Early line dashing code),\n  David Gohel [ctb] (Line dashing code and early raster code),\n  Yixuan Qiu [ctb] (Improved styles; polypath implementation),\n  Håkon Malmedal [ctb] (Opacity code),\n  Posit, PBC [cph, fnd]",
+        "Maintainer": "Thomas Lin Pedersen <thomas.pedersen@posit.co>",
+        "Repository": "CRAN",
+        "Date/Publication": "2023-12-08 16:20:13 UTC",
+        "Built": "R 4.4.0; aarch64-apple-darwin20; 2024-04-05 22:33:41 UTC; unix",
+        "Archs": "svglite.so.dSYM"
+      }
+    },
     "sys": {
       "Source": "CRAN",
       "Repository": "https://cran.rstudio.com",
@@ -3818,6 +4089,18 @@
   "files": {
     "report.qmd": {
       "checksum": "0167d2ddec2971284f9f45e78cb99d3c"
+    },
+    "RP_Logo_White.png": {
+      "checksum": "9e55e948fd9a5b747c45bc8fe7085bc5"
+    },
+    "styles.css": {
+      "checksum": "50ef9e679fbe36a80fe2222a12ad6bef"
+    },
+    "test_ccss_report.html": {
+      "checksum": "c872469875a532c7eaba13b330f04d89"
+    },
+    "test_ccss_report.qmd": {
+      "checksum": "c51aa90176dc9c222dcaa040c5a7474d"
     }
   },
   "users": null
