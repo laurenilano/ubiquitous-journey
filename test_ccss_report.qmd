@@ -24,7 +24,6 @@ format:
 # Note: for gglikert only excludes NA from the denominator, so need to convert 'did not receive question' to NA *before* running gglikert 
 
 library(tidyverse)
-library(fst)
 library(knitr)
 library(kableExtra)
 library(rmarkdown)
