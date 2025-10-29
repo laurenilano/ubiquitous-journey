@@ -229,6 +229,7 @@ This report summarizes the key statewide findings from the Spring 2025 Campus Cl
 The demographic characteristics of all survey respondents across participating institutions are summarized below. Each institution received its own local data, enabling further disaggregation of categories such as "Other – Write-In" as appropriate for local analyses. The statewide overview presented here provides a comparative reference point for campuses to contextualize their own respondent demographics. Because the gender and race/ethnicity questions appeared at the conclusion of the survey, some participants did not encounter these items. In the table below, we analytically differentiate between respondents who reached the end of the survey but did not answer these non-required questions and those who exited the survey prior to completion.
 
 :::{.callout-caution icon=false collapse="true"}
+
 ## Expand to learn more about the survey respondents
 
 ```{r}
@@ -280,6 +281,7 @@ rbind(employment_area, employment_class, employment_length, employment_status, g
 :::
 
 {{< pagebreak >}}
+
 # Topline Survey Results 
 
 The results presented in this section reflect averaged agreement scores across multiple content areas related to campus climate. The percentages reflect the proportion of respondents who responded positively (i.e., "Strongly Agree" or "Agree") across all of the survey items that comprise each construct. These aggregated indicators are designed to provide a high-level view of the overall climate experience, capturing perceptions across all employee respondents. These metrics are intended to serve as entry points for identifying factors that positively or negatively influence the campus environment. Additionally, colleges are encouraged to further disaggregate this data by specific survey items or demographic groups to yield deeper insights into the unique experiences of employee groups.
@@ -478,6 +480,7 @@ constructs %>%
 ```
 
 {{< pagebreak >}}
+
 # Campus Climate Experiences
 
 The following sections show more detailed findings across the four dimensions: (1) Empowerment and Agency; (2) Diversity, Equity, Inclusion, and Accessibility; (3) Safety and Security; (4) Trust and Confidence. 
@@ -556,6 +559,7 @@ employee_survey %>%
 
 
 {{< pagebreak >}}
+
 ## Empowerment and Agency
 
 ```{r}
@@ -608,6 +612,7 @@ gglikert(employee_survey,
 
 
 {{< pagebreak >}}
+
 ### Overall Sense of Belonging
 
 ```{r}
@@ -719,6 +724,7 @@ likert_belong + not_sure_bars + plot_layout(widths = c(4, 1)) -> x
 
 
 {{< pagebreak >}}
+
 ### Sense of Belonging within Department/Area
 ```{r}
 #| echo: false
@@ -822,6 +828,7 @@ likert_belong_dept + not_sure_bars + plot_layout(widths = c(4, 1)) -> x
 ```
 
 {{< pagebreak >}}
+
 ### Fair and Equal Treatment
 
 ```{r}
@@ -926,6 +933,7 @@ likert_fair_equal_treat + not_sure_bars + plot_layout(widths = c(4, 1)) -> x
 
 
 {{< pagebreak >}}
+
 ## Diversity, Equity, Inclusion and Accessibility
 
 ### Racial Tension
@@ -1002,6 +1010,7 @@ employee_survey %>%
 ```
 
 {{< pagebreak >}}
+
 ### Experiences with Discrimination
 ```{r}
 #| echo: false
@@ -1139,6 +1148,7 @@ disc_items_all %>%
 ```
 
 {{< pagebreak >}}
+
 ### Experiences with Microaggressions
 ```{r}
 #| echo: false
@@ -1244,6 +1254,7 @@ microaggressions_items_all %>%
 ```
 
 {{< pagebreak >}}
+
 ### Experiences with Microaggressions among BIPOC Employees
 ```{r}
 #| echo: false
@@ -1388,6 +1399,7 @@ experienced_bipoc %>%
 
 
 {{< pagebreak >}}
+
 ## Safety and Security
 
 ### Physical Safety
@@ -1487,6 +1499,7 @@ likert_phys_safety + not_sure_bars + plot_layout(widths = c(4, 1))
 ```
 
 {{< pagebreak >}}
+
 ### Psychological Safety
 ```{r}
 #| echo: false
@@ -1656,9 +1669,11 @@ likert_psychological_safety + not_sure_bars + plot_layout(widths = c(4, 1))
 
 
 {{< pagebreak >}}
+
 ## Trust and Confidence
 
 {{< pagebreak >}}
+
 ### Overall Leadership Ratings
 
 The graph below takes the aggregate agreement levels across all items in the survey asking about each of the following groups. 
@@ -1812,6 +1827,7 @@ likert_const_group + not_sure_bars + plot_layout(widths = c(4, 1))
 ```
 
 {{< pagebreak >}}
+
 ### Constituency Group
 
 ```{r}
@@ -1905,6 +1921,7 @@ likert_leader_const + not_sure_bars + plot_layout(widths = c(4, 1))
 ```
 
 {{< pagebreak >}}
+
 ### Department/Area
 
 ```{r}
@@ -1997,6 +2014,7 @@ likert_leader_dept + not_sure_bars + plot_layout(widths = c(4, 1))
 ```
 
 {{< pagebreak >}}
+
 ### Executive Leadership
 
 ```{r}
@@ -2093,6 +2111,7 @@ likert_leader_exec + not_sure_bars + plot_layout(widths = c(4, 1))
 ```
 
 {{< pagebreak >}}
+
 ### Board of Trustees
 
 ```{r}
