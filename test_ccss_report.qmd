@@ -1715,9 +1715,9 @@ likert_psychological_safety + not_sure_bars + plot_layout(widths = c(4, 1))
 
 
 {{< pagebreak >}}
+
 ## Trust and Confidence
 
-{{< pagebreak >}}
 ### Overall Leadership Ratings
 
 The graph below takes the aggregate agreement levels across all items in the survey asking about each of the following groups. 
