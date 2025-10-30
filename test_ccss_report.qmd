@@ -35,7 +35,7 @@ library(ggstats)
 
 # Parameters
 term_name <- "Spring-2025"
-sftp_folder <- paste0("fake data/")
+sftp_folder <- paste0("fake data")
 employee_survey_file <- paste0(sftp_folder, "/employee_survey_fake.sav")
 
 scale_colors <- c("#035157", "#179CA6", "#D97D0D", "#BF563D")
@@ -56,9 +56,7 @@ employee_survey <- haven::read_spss(employee_survey_file) %>%
                                 provided_race > 0 & race_07 == 0 ~ "BIPOC", 
                                 TRUE ~ "Not BIPOC")) %>%
   filter(consent == 10001) %>%
-  mutate(responseid = paste0(urlvar_college, responseid)) #%>%
-  #slice_sample(n=100)
-  
+  mutate(responseid = responseid2)
   
 
 respondents <- employee_survey %>% distinct(responseid) %>% nrow()
@@ -226,10 +224,9 @@ This report summarizes the key statewide findings from the Spring 2025 Campus Cl
 
 
 ## Demographics
-The demographic characteristics of all survey respondents across participating institutions are summarized below. Each institution received its own local data, enabling further disaggregation of categories such as "Other – Write-In" as appropriate for local analyses. The statewide overview presented here provides a comparative reference point for campuses to contextualize their own respondent demographics. Because the gender and race/ethnicity questions appeared at the conclusion of the survey, some participants did not encounter these items. In the table below, we analytically differentiate between respondents who reached the end of the survey but did not answer these non-required questions and those who exited the survey prior to completion.
+The demographic characteristics of employee survey respondents across participating institutions are summarized below. Each institution received its own local data, enabling further disaggregation of categories such as "Other – Write-In" as appropriate for local analyses. The statewide overview presented here provides a comparative reference point for campuses to contextualize their own respondent demographics. Because the gender and race/ethnicity questions appeared at the conclusion of the survey, some participants did not encounter these items. In the table below, we analytically differentiate between respondents who reached the end of the survey but did not answer these non-required questions and those who exited the survey prior to completion.
 
 :::{.callout-caution icon=false collapse="true"}
-
 ## Expand to learn more about the survey respondents
 
 ```{r}
@@ -284,37 +281,51 @@ rbind(employment_area, employment_class, employment_length, employment_status, g
 
 # Topline Survey Results 
 
-The results presented in this section reflect averaged agreement scores across multiple content areas related to campus climate. The percentages reflect the proportion of respondents who responded positively (i.e., "Strongly Agree" or "Agree") across all of the survey items that comprise each construct. These aggregated indicators are designed to provide a high-level view of the overall climate experience, capturing perceptions across all employee respondents. These metrics are intended to serve as entry points for identifying factors that positively or negatively influence the campus environment. Additionally, colleges are encouraged to further disaggregate this data by specific survey items or demographic groups to yield deeper insights into the unique experiences of employee groups.
+The topline survey results are intended to provide a general snapshot of the five main sections included in this report: 
 
-[Explain rating scale]
+> **Campus Climate**: The perceptions, attitudes, experiences, and expectations of individuals and groups on a campus, and the quality and extent of the interaction between various groups and individuals within an institution.
 
-The topline survey results are intended to provide a general snapshot of the four main sections included in this report: 
+> **Empowerment and Agency**: The extent that constituencies have the resources and tools to proactively and effectively make progress towards their personal and professional goals. 
 
-**Empowerment and Agency**
+> **Diversity, Equity, Inclusion and Accessibility**: Perception of a culture that uplifts and promotes diversity, equity, and inclusion as core to its mission. The culture is reflected through the students it serves, employees hired, teaching and learning, support services, policies and practices.
 
-  + Employee Belonging at the College
-  + Employee Belonging in the Department
-  + Fair and Equal Treatment
+> **Safety and Security**: The extent that constituencies feel emotionally, mentally, and physically safe and secure at the institution.
 
-**Diversity, Equity, Inclusion and Accessibility**
+> **Trust and Confidence**: The extent to which constituencies personally experience fair and equitable treatment, understand the mechanisms for addressing unfairness, and feel that leadership actively promotes an inclusive and equitable campus environment.
 
-  + NEED TO ADD
+These aggregated indicators below are designed to provide a high-level view of the overall climate experience, capturing perceptions across all employee respondents. 
 
-**Safety and Security**
+For the majority of the toplines below, percentages reflect the proportion of respondents who responded positively (i.e., "Strongly Agree" or "Agree") across the survey items that comprise each construct. For the absence of racial tension item, we provide the percent of respondents who reported that they do not experience racial tension on their campus. 
 
-  + Physical Safety
+Results are grouped into three categories based on employee sentiment.  
 
-**Trust and Confidence**
-
-  + Leadership Effectiveness of the respondents' Constituency Group
-  + Leadership Effectiveness of the respondents' Department/Area
-  + Leadership Effectiveness of the Executive Leadership Team
-  + Leadership Effectiveness of the Board of Trustees
+  + **Warrants Attention (0-50%)**: Half or fewer employees provided a favorable rating in this area, suggesting a need for closer review or improvement.
+  + **Area of Opportunity (51-75%)**: A majority of employees responded positively, though there is opportunity for continued growth.
+  + **Area of Strength (76-100%)**: Most employees provided favorable responses, indicating a relative strength for the college.
      
 ```{r}
 #| echo: false
 #| message: false
 #| warning: false
+
+# Campus Climate
+df_campus_climate_pos <- employee_survey %>%
+  select(responseid, climate_rating) %>%
+  pivot_longer(cols = climate_rating, 
+               names_to = "var",
+               values_to = "response") %>%
+  mutate(var = "campus climate") %>%
+  filter(!is.na(response)) %>%
+  mutate(response = as_factor(response, levels = "labels")) %>%
+  mutate(positive = ifelse(response %in% c("Very positive", "Somewhat positive"), 1, 0))
+
+climate_positive <- df_campus_climate_pos %>%
+  count(positive) %>%
+  mutate(total = sum(n),
+         pct = n/sum(n)) %>%
+  filter(positive == 1) %>%
+  mutate(construct = "Campus Climate Overall Rating") %>%
+  select(construct, n, total, pct)
 
 # Physical Safety
 df_agg_phys_safety <- employee_survey %>%
@@ -394,6 +405,26 @@ emp_opp_positive <- df_agg_emp_opp %>%
   mutate(construct = "Fair and Equal Treatment") %>%
   select(construct, n, total, pct)
 
+# Racial tension
+df_racial_tension <- employee_survey %>%
+  # convert to yes/no/not sure
+  mutate(racialtension2 = case_when(racialtension %in% c("Yes", "Strongly Agree", "Agree") ~ "Yes",
+                                   racialtension %in% c("No", "Strongly Disagree", "Disagree") ~ "No",
+                                   racialtension %in% c("Not Sure", "Not Applicable", "Neither Agree nor Disagree") ~ "Not Sure",
+                                   TRUE ~ NA_character_)) %>%
+  filter(!is.na(racialtension2)) %>%
+  mutate(racialtension2 = factor(racialtension2, levels = c("No", "Not Sure", "Yes"))) %>%
+  select(responseid, racialtension2) 
+
+no_racial_tension <- df_racial_tension %>% 
+  count(racialtension2) %>%
+  mutate(total = sum(n),
+         pct = n/sum(n)) %>%
+  filter(racialtension2 == "No") %>%
+  mutate(construct = "Absence of Racial Tension") %>%
+  select(construct, n, total, pct)
+
+
 # Leadership
 df_leadership <- employee_survey %>%
   select(responseid, starts_with("leader_")) %>%
@@ -422,20 +453,24 @@ leadership_positive <- df_leadership %>%
   select(construct, n, total, pct)
   
 
-constructs <- rbind(emp_belong_coll_positive, emp_belong_dept_positive, physical_safety_positive, emp_opp_positive, leadership_positive) %>% 
-  mutate(order = case_when(construct == "Employee Belonging - College" ~ 1, 
-                           construct == "Employee Belonging - Department" ~ 2,
-                           construct == "Fair and Equal Treatment" ~ 3,
-                           construct == "Physical Safety" ~ 4,
-                           construct == "Leadership Effectiveness - Constituency Group" ~ 5,
-                           construct == "Leadership Effectiveness - Department/Area" ~ 6,
-                           construct == "Leadership Effectiveness - Executive Leadership Team" ~ 7,
-                           construct == "Leadership Effectiveness - Board of Trustees" ~ 8)) %>%
+constructs <- rbind(emp_belong_coll_positive, emp_belong_dept_positive, climate_positive, no_racial_tension, physical_safety_positive, emp_opp_positive, leadership_positive) %>% 
+  mutate(order = case_when(construct == "Campus Climate Overall Rating" ~ 1,
+                           construct == "Employee Belonging - College" ~ 2, 
+                           construct == "Employee Belonging - Department" ~ 3,
+                           construct == "Fair and Equal Treatment" ~ 4,
+                           construct == "Absence of Racial Tension" ~ 5,
+                           construct == "Physical Safety" ~ 6,
+                           construct == "Leadership Effectiveness - Constituency Group" ~ 7,
+                           construct == "Leadership Effectiveness - Department/Area" ~ 8,
+                           construct == "Leadership Effectiveness - Executive Leadership Team" ~ 9,
+                           construct == "Leadership Effectiveness - Board of Trustees" ~ 10)) %>%
   arrange(desc(order)) %>%
-  mutate(construct = factor(construct, levels = c("Employee Belonging - College",
+  mutate(construct = factor(construct, levels = c("Campus Climate Overall Rating",
+                                                  "Employee Belonging - College",
                                                   "Employee Belonging - Department",
                                                   "Fair and Equal Treatment",
                                                   "Physical Safety",
+                                                  "Absence of Racial Tension",
                                                   "Leadership Effectiveness - Constituency Group",
                                                   "Leadership Effectiveness - Department/Area",
                                                   "Leadership Effectiveness - Executive Leadership Team",
@@ -483,7 +518,7 @@ constructs %>%
 
 # Campus Climate Experiences
 
-The following sections show more detailed findings across the four dimensions: (1) Empowerment and Agency; (2) Diversity, Equity, Inclusion, and Accessibility; (3) Safety and Security; (4) Trust and Confidence. 
+The following sections show more detailed findings across five dimensions: (1) Campus Climate Rating Overall, (2) Empowerment and Agency; (3) Diversity, Equity, Inclusion, and Accessibility; (4) Safety and Security; (5) Trust and Confidence. 
 
 For agreement survey items, agree and disagree responses are aggregated and all respondents who selected another response (e.g., "Not Sure", "Neither Agree nor Disagree", or "Not Applicable") are aggregated and shown in grey. We exclude all respondents who skipped each survey item, so grey bars connote active responses that do not align with either agreement or disagreement. The full frequency tables for each survey item are provided to the college in an excel file for further analysis. 
 
@@ -593,12 +628,13 @@ gglikert(employee_survey,
          # reverse_likert = TRUE,
          add_labels = TRUE,
          add_totals = FALSE,
-         labels_hide_below = .01,
-         width = 0.6) + 
+         labels_hide_below = .021,
+         width = 0.6,
+         cutoff = 0) + 
    scale_fill_manual(values = c("#D97D0D", "#179CA6", "#035157")) +
   ggtitle("When thinking specifically about your experience in the \nlast year, how true are the following about your experiences?", subtitle= paste0("n=", scales::comma(n_empowerment_agency))) +
 
-  scale_x_continuous(labels = function(x) paste0(abs(x)*100, "%"), limits = c(-1, 1)) +
+  scale_x_continuous(labels = function(x) paste0(abs(x)*100, "%"), limits = c(0, 1)) +
   theme(axis.text.y = element_text(size=12, colour = "black"),
         plot.title = element_text(size = 11, face="bold"),
         legend.position = "top",
@@ -1228,7 +1264,7 @@ microaggressions_items_all %>%
   ggplot(aes(x = pct, y = fct_rev(var_label))) +
   geom_col(fill = "#035157", width = 0.6) +
   geom_text(data = microaggressions_items_all %>% filter(var_label == "Selected any of the above"),
-            aes(label = pct_neat, hjust = 0.99), color = "white", fontface = "bold") +
+            aes(label = pct_neat, hjust = -0.01), color = "white", fontface = "bold") +
   geom_text(data = microaggressions_items_all %>% filter(var_label != "Selected any of the above"),
             aes(label = pct_neat, hjust = -0.01), color = "black", fontface = "bold") +
   ggtitle("Have you personally experienced or witnessed any of the\nfollowing types of microaggressions at your college?", subtitle = paste0("n=", scales::comma(n_microaggressions))) +
@@ -1342,27 +1378,59 @@ group_by(var) %>%
   
 
 nudge_value = 0.05
+
 # Dumbell Plot
+# experienced_bipoc %>%
+#   ggplot(aes(x = pct, y = fct_rev(var_label))) +
+#   geom_line(color="#E7E7E7", linewidth=3.5) +
+#   geom_point(aes(color = group), size = 3) +
+#   geom_text(aes(label=pct_neat),
+#             color = "black",
+#             fontface="bold",
+#             size=3.5,
+#             alpha = 1,
+#             nudge_x=if_else(
+#               experienced_bipoc$max_pct == 1, # if it's the larger value...
+#               nudge_value,   # move it to the right of the point
+#               -nudge_value)) + # otherwise, move it to the left of the point
+#   scale_color_manual(values = c("#32c0d2", "#035157")) +
+#   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
+#   scale_y_discrete(labels = function(x) str_wrap(x, width = 45)) +
+#   ggtitle("Have you personally experienced or witnessed any\nof the following types of microaggressions at your\ncollege?") +
+#   labs(x = "", y = "") +
+#   theme_bw() +
+#   theme(text = element_text(colour = "black", family="arial"),
+#         plot.title = element_text(size=12, face="bold"),
+#         axis.ticks = element_blank(),
+#         axis.text.y = element_text(size = 12, colour = "black"),
+#         legend.position = "top",
+#         legend.title = element_blank(),
+#         guide_legend(reverse=FALSE),
+#         panel.grid.major = element_blank(),
+#         panel.grid.minor = element_blank(),
+#         panel.border = element_blank(),
+#         panel.background = element_blank())
+
+# Bar Graph ---------------------------------------
 experienced_bipoc %>%
-  ggplot(aes(x = pct, y = fct_rev(var_label))) +
-  geom_line(color="#E7E7E7", linewidth=3.5) + 
-  geom_point(aes(color = group), size = 3) +
-  geom_text(aes(label=pct_neat),
+  ggplot(aes(x = pct, y = fct_rev(var_label), group = group, fill = group)) +
+  geom_col(position="dodge", width=.9) +
+  geom_text(aes(label = pct_neat, hjust = -0.1), 
+            position = position_dodge(width = .9), 
             color = "black",
             fontface="bold",
             size=3.5,
-            alpha = 1,
-            nudge_x=if_else(
-              experienced_bipoc$max_pct == 1, # if it's the larger value...
-              nudge_value,   # move it to the right of the point
-              -nudge_value)) + # otherwise, move it to the left of the point
-  scale_color_manual(values = c("#32c0d2", "#035157")) +
+            alpha = 1,) +
+  # facet_wrap(~group) +
+  scale_y_discrete(labels = function(x) str_wrap(x, width = 35)) +
+  scale_fill_manual(values = c("#32c0d2", "#035157")) +
   scale_x_continuous(labels = scales::percent, limits = c(0, 1)) +
   scale_y_discrete(labels = function(x) str_wrap(x, width = 45)) +
-  ggtitle("Have you personally experienced or witnessed any\nof the following types of microaggressions at your\ncollege?") + 
-  labs(x = "", y = "") +
+  xlab("") +
+  ylab("") +
+  ggtitle("Have you personally experienced or witnessed any\nof the following types of microaggressions at your\ncollege?") +
   theme_bw() +
-  theme(text = element_text(colour = "black", family="arial"),
+    theme(text = element_text(colour = "black", family="arial"),
         plot.title = element_text(size=12, face="bold"),
         axis.ticks = element_blank(),
         axis.text.y = element_text(size = 12, colour = "black"),
@@ -1373,27 +1441,6 @@ experienced_bipoc %>%
         panel.grid.minor = element_blank(),
         panel.border = element_blank(),
         panel.background = element_blank())
-
-# Bar Graph ---------------------------------------
-# witnessed_or_experienced_bipoc %>%
-#   ggplot(aes(x = pct, y = fct_rev(var_label), group = group, fill = group)) +
-#   geom_col(position="dodge") +
-#   geom_text(aes(label = paste0(round(pct * 100, 1), "%"), hjust = 0.99), position = position_dodge(width = .9), color = "white") +
-#   # facet_wrap(~group) +
-#   scale_y_discrete(labels = function(x) str_wrap(x, width = 35)) +
-#   scale_x_continuous(labels = scales::percent) +
-#   xlab("") +
-#   ylab("Type of Microaggression") +
-#   theme_bw() +
-#   theme(axis.ticks = element_blank(),
-#         axis.text.y = element_text(size = 10), color = "black",
-#         legend.position = "top",
-#         legend.title = element_blank(),
-#         guide_legend(reverse=FALSE),
-#         panel.grid.major = element_blank(),
-#         panel.grid.minor = element_blank(),
-#         panel.border = element_blank(),
-#         panel.background = element_blank())
 ```
 
 
@@ -1499,7 +1546,6 @@ likert_phys_safety + not_sure_bars + plot_layout(widths = c(4, 1))
 ```
 
 {{< pagebreak >}}
-
 ### Psychological Safety
 ```{r}
 #| echo: false
@@ -1669,11 +1715,9 @@ likert_psychological_safety + not_sure_bars + plot_layout(widths = c(4, 1))
 
 
 {{< pagebreak >}}
-
 ## Trust and Confidence
 
 {{< pagebreak >}}
-
 ### Overall Leadership Ratings
 
 The graph below takes the aggregate agreement levels across all items in the survey asking about each of the following groups. 
@@ -1827,7 +1871,6 @@ likert_const_group + not_sure_bars + plot_layout(widths = c(4, 1))
 ```
 
 {{< pagebreak >}}
-
 ### Constituency Group
 
 ```{r}
@@ -1921,7 +1964,6 @@ likert_leader_const + not_sure_bars + plot_layout(widths = c(4, 1))
 ```
 
 {{< pagebreak >}}
-
 ### Department/Area
 
 ```{r}
@@ -2014,7 +2056,6 @@ likert_leader_dept + not_sure_bars + plot_layout(widths = c(4, 1))
 ```
 
 {{< pagebreak >}}
-
 ### Executive Leadership
 
 ```{r}
@@ -2111,7 +2152,6 @@ likert_leader_exec + not_sure_bars + plot_layout(widths = c(4, 1))
 ```
 
 {{< pagebreak >}}
-
 ### Board of Trustees
 
 ```{r}
@@ -2209,6 +2249,8 @@ not_sure_bars <- not_sure_etc %>%
 
 likert_leader_bot + not_sure_bars + plot_layout(widths = c(4, 1))
 ```
+
+
 
 
 
