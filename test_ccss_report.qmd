@@ -219,7 +219,22 @@ rbind(gender_01, gender_02, gender_03, gender_04, gender_05,
 ```
 
 # Introduction
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
 
+library(downloadthis)
+download_file(
+  link = "employee_pdf_test.pdf",
+  button_label = "Download PDF file",
+  button_type = "danger",
+  has_icon = TRUE,
+  icon = "fa fa-save",
+  self_contained = TRUE
+)
+
+```
 This report summarizes the key statewide findings from the Spring 2025 Campus Climate Survey, administered by The Research and Planning Group for California Community Colleges ([The RP Group](https://rpgroup.org/)). The survey garnered `r scales::comma(respondents)` respondents, providing a cross-section of employee sentiment regarding the campus climate. The results reveal both strengths to build upon and areas requiring intervention to ensure an inclusive, supportive workplace for all employees. The statewide results presented below represent aggregated responses across all participating institutions. However, for some items, results from select colleges are excluded due to institutional customizations in which certain survey questions were not administered locally.
 
 
